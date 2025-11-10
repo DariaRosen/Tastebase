@@ -3,7 +3,7 @@
 import { createServerSupabase } from '@/lib/supabaseServer';
 
 export default async function SessionBootstrap() {
-	const supabase = createServerSupabase();
+	const supabase = await createServerSupabase();
 	const {
 		data: { user },
 	} = await supabase.auth.getUser();
