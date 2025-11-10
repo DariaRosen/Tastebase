@@ -94,6 +94,12 @@ export const ProfileForm = ({
 
 			setStatus({ type: 'success', message: 'Profile updated successfully.' });
 			setAvatarFile(null);
+
+			if (typeof window !== 'undefined') {
+				setTimeout(() => {
+					window.location.href = '/';
+				}, 1000);
+			}
 		} catch (error) {
 			setStatus({
 				type: 'error',
