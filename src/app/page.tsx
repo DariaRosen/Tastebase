@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Header } from '@/components/header';
 import { TabSwitcher } from '@/components/tab-switcher';
 import { RecipeCard } from '@/components/recipe-card';
+import { createClient } from '@/lib/supabase';
 
 type Tab = 'latest' | 'popular';
 
@@ -79,6 +80,24 @@ const mockRecipes = [
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('latest');
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createClient();
+    let mounted = true;
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!mounted) return;
+      setIsLoggedIn(Boolean(data.user));
+    })();
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setIsLoggedIn(Boolean(session?.user));
+    });
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
 
   // In a real app, this would filter based on the active tab
   const displayedRecipes = mockRecipes;
@@ -88,13 +107,24 @@ export default function Home() {
       <Header />
 
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Discover Amazing Recipes
-          </h1>
-          <p className="text-gray-600">
-            Explore delicious recipes from our community of home cooks
-          </p>
+        <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Discover Amazing Recipes
+            </h1>
+            <p className="text-gray-600">
+              Explore delicious recipes from our community of home cooks
+            </p>
+          </div>
+          {isLoggedIn && (
+            <a
+              href="/create"
+              className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+              aria-label="Add new recipe"
+            >
+              Add new recipe
+            </a>
+          )}
         </div>
 
         <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />

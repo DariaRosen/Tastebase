@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Search, Plus, LogIn } from 'lucide-react';
+import { Search, LogIn } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
 import { AuthDialog } from './auth/auth-dialog';
@@ -55,15 +55,6 @@ export const Header = () => {
           >
             <Search className="h-5 w-5" />
           </button>
-           {isLoggedIn && (
-             <button
-               className="hidden sm:flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors"
-               aria-label="Create Recipe"
-             >
-               <Plus className="h-4 w-4" />
-               <span className="text-sm font-medium">Create</span>
-             </button>
-           )}
           {isLoggedIn ? (
             <UserMenu />
           ) : (
