@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
 
@@ -103,7 +104,15 @@ export const UserMenu = () => {
 					tabIndex={0}
 					onKeyDown={(e) => e.key === 'Escape' && setIsOpen(false)}
 				>
-					<div className="px-3 py-2 text-sm text-gray-600">{displayName}</div>
+					<div className="px-3 py-2 text-sm font-semibold text-gray-800">{displayName}</div>
+					<Link
+						href="/profile"
+						onClick={() => setIsOpen(false)}
+						className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+						role="menuitem"
+					>
+						Profile
+					</Link>
 					<button
 						onClick={handleSignOut}
 						className="w-full rounded-md px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
