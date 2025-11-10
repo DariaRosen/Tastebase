@@ -1,12 +1,22 @@
 'use client';
 
-import { useActionState } from 'react';
+import { useActionState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { createRecipeAction, type CreateRecipeState } from './actions';
 
 const initialState: CreateRecipeState = {};
 
 export const CreateRecipeForm = () => {
 	const [state, formAction, isPending] = useActionState(createRecipeAction, initialState);
+	const router = useRouter();
+
+	useEffect(() => {
+		if (!state.redirectTo) return;
+		const timeout = setTimeout(() => {
+			router.push(state.redirectTo!);
+		}, 800);
+		return () => clearTimeout(timeout);
+	}, [state.redirectTo, router]);
 
 	return (
 		<form action={formAction} className="space-y-6">
