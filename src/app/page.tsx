@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Header } from '@/components/header';
 import { TabSwitcher } from '@/components/tab-switcher';
 import { RecipeCard } from '@/components/recipe-card';
@@ -117,13 +118,13 @@ export default function Home() {
             </p>
           </div>
           {isLoggedIn && (
-            <a
+            <Link
               href="/create"
               className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
               aria-label="Add new recipe"
             >
               Add new recipe
-            </a>
+            </Link>
           )}
         </div>
 
