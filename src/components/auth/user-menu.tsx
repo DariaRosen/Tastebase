@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 
 interface UserInfo {
 	id: string;
 	email?: string;
-	full_name?: string | null;
-	avatar_url?: string | null;
+	username?: string;
+	avatarUrl?: string | null;
 }
 
 export const UserMenu = () => {
@@ -18,23 +19,52 @@ export const UserMenu = () => {
 		const supabase = createClient();
 		let mounted = true;
 
-		async function load() {
+		const resolveUser = async (authUser: User | null): Promise<UserInfo | null> => {
+			if (!authUser) return null;
+
+			const metadata = (authUser.user_metadata ?? {}) as Record<string, unknown>;
+			const initialUsername = typeof metadata.username === 'string' ? metadata.username : undefined;
+			const initialAvatar = typeof metadata.avatar_url === 'string' ? metadata.avatar_url : undefined;
+
+			if (initialUsername && initialAvatar) {
+				return {
+					id: authUser.id,
+					email: authUser.email ?? undefined,
+					username: initialUsername,
+					avatarUrl: initialAvatar,
+				};
+			}
+
+			const { data: profile } = await supabase
+				.from('profiles')
+				.select('username, avatar_url')
+				.eq('id', authUser.id)
+				.single();
+
+			return {
+				id: authUser.id,
+				email: authUser.email ?? undefined,
+				username: profile?.username ?? initialUsername,
+				avatarUrl: profile?.avatar_url ?? initialAvatar ?? null,
+			};
+		};
+
+		(async () => {
 			const { data } = await supabase.auth.getUser();
 			if (!mounted) return;
-			if (data.user) {
-				setUser({
-					id: data.user.id,
-					email: data.user.email ?? undefined,
+			const info = await resolveUser(data.user);
+			if (mounted) setUser(info);
+		})();
+
+		const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+			if (!mounted) return;
+			if (session?.user) {
+				resolveUser(session.user).then((info) => {
+					if (mounted) setUser(info);
 				});
 			} else {
 				setUser(null);
 			}
-		}
-
-		load();
-
-		const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-			setUser(session?.user ? { id: session.user.id, email: session.user.email ?? undefined } : null);
 		});
 
 		return () => {
@@ -52,7 +82,8 @@ export const UserMenu = () => {
 
 	if (!user) return null;
 
-	const initial = user.email?.[0]?.toUpperCase() ?? 'U';
+	const displayName = user.username ?? user.email ?? 'Account';
+	const initial = displayName[0]?.toUpperCase() ?? 'U';
 
 	return (
 		<div className="relative">
@@ -72,7 +103,7 @@ export const UserMenu = () => {
 					tabIndex={0}
 					onKeyDown={(e) => e.key === 'Escape' && setIsOpen(false)}
 				>
-					<div className="px-3 py-2 text-sm text-gray-600">{user.email}</div>
+					<div className="px-3 py-2 text-sm text-gray-600">{displayName}</div>
 					<button
 						onClick={handleSignOut}
 						className="w-full rounded-md px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
