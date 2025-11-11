@@ -8,6 +8,7 @@ import { createServerSupabase } from '@/lib/supabaseServer';
 export interface UpdateRecipeState {
 	errors?: Record<string, string>;
 	message?: string;
+	redirectTo?: string;
 }
 
 const parseNumber = (value: FormDataEntryValue | null) => {
@@ -161,7 +162,7 @@ export async function updateRecipeAction(
 
 		revalidatePath('/');
 		revalidatePath(`/recipe/${recipeId}`);
-		redirect(`/recipe/${recipeId}`);
+		return { redirectTo: `/recipe/${recipeId}` };
 	} catch (error) {
 		return {
 			message: error instanceof Error ? error.message : 'Unexpected error updating recipe.',

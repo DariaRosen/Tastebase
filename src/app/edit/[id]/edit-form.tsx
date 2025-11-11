@@ -104,6 +104,11 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 		setSteps((prev) => (prev.length === 1 ? [''] : prev.filter((_, i) => i !== index)));
 	};
 
+	useEffect(() => {
+		if (!state.redirectTo) return;
+		router.push(state.redirectTo);
+	}, [state.redirectTo, router]);
+
 	return (
 		<form action={formAction} className="space-y-6">
 			<input type="hidden" name="existingHeroImageUrl" value={initial.heroImageUrl ?? ''} />
