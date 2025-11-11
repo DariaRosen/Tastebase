@@ -209,7 +209,7 @@ export default function WishlistPage() {
 						className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white shadow transition hover:bg-orange-700"
 						aria-label="Back to home"
 					>
-						Browse recipes
+						← Back to recipes
 					</Link>
 				</div>
 

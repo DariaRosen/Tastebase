@@ -128,19 +128,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 		<div className="min-h-screen bg-gray-50">
 			<Header />
 			<main className="container mx-auto px-4 py-10">
-				<div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-					<Link
-						href="/"
-						className="inline-flex items-center text-sm font-medium text-orange-600 hover:underline"
-						aria-label="Back to home"
-					>
-						← Back to recipes
-					</Link>
+				<div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
 					<Link
 						href="/"
 						className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
 					>
-						Browse recipes
+						← Back to recipes
 					</Link>
 				</div>
 
