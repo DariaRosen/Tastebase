@@ -74,6 +74,18 @@ export const UserMenu = () => {
 		};
 	}, []);
 
+	useEffect(() => {
+		if (!isOpen) return;
+		const handleClick = (event: MouseEvent) => {
+			const target = event.target as HTMLElement;
+			if (!target.closest('[data-user-menu-root]')) {
+				setIsOpen(false);
+			}
+		};
+		document.addEventListener('mousedown', handleClick);
+		return () => document.removeEventListener('mousedown', handleClick);
+	}, [isOpen]);
+
 	const handleSignOut = async () => {
 		const supabase = createClient();
 		await supabase.auth.signOut();
@@ -86,8 +98,14 @@ export const UserMenu = () => {
 	const displayName = user.username ?? user.email ?? 'Account';
 	const initial = displayName[0]?.toUpperCase() ?? 'U';
 
+	const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
+		if (!event.currentTarget.contains(event.relatedTarget)) {
+			setIsOpen(false);
+		}
+	};
+
 	return (
-		<div className="relative">
+		<div className="relative" data-user-menu-root onBlur={handleBlur}>
 			<button
 				className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-orange-600 text-white"
 				onClick={() => setIsOpen((v) => !v)}
