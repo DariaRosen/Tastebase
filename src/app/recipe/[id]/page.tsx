@@ -41,7 +41,8 @@ interface RecipeDetailPageProps {
 }
 
 export default async function RecipeDetailPage({ params }: RecipeDetailPageProps) {
-	const recipeId = Number(params.id);
+	const resolvedParams = await params;
+	const recipeId = Number(resolvedParams.id);
 	if (Number.isNaN(recipeId)) {
 		notFound();
 	}
@@ -86,7 +87,13 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 		.order('position', { foreignTable: 'recipe_steps', ascending: true })
 		.single<RecipeDetailRow>();
 
-	if (error || !recipe) {
+	if (error) {
+		console.error('[RecipeDetail] fetch error', { recipeId, error });
+		notFound();
+	}
+
+	if (!recipe) {
+		console.warn('[RecipeDetail] no recipe found', { recipeId });
 		notFound();
 	}
 
@@ -104,6 +111,8 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 			.limit(1)
 			.maybeSingle();
 		isSaved = Boolean(saved);
+	} else {
+		console.info('[RecipeDetail] user not signed in; wishlist toggle requires login');
 	}
 
 	const wishlistCount = recipe.recipe_saves?.[0]?.count ?? 0;
