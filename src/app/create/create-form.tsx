@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createRecipeAction, type CreateRecipeState } from './actions';
 
@@ -9,6 +9,82 @@ const initialState: CreateRecipeState = {};
 export const CreateRecipeForm = () => {
 	const [state, formAction, isPending] = useActionState(createRecipeAction, initialState);
 	const router = useRouter();
+	const [ingredients, setIngredients] = useState<string[]>(['']);
+	const [steps, setSteps] = useState<string[]>(['']);
+
+	const handleIngredientChange = (index: number, value: string) => {
+		setIngredients((prev) => {
+			const next = [...prev];
+			next[index] = value;
+			return next;
+		});
+	};
+
+	const handleStepChange = (index: number, value: string) => {
+		setSteps((prev) => {
+			const next = [...prev];
+			next[index] = value;
+			return next;
+		});
+	};
+
+	const addIngredient = (atIndex?: number) =>
+		setIngredients((prev) => {
+			const next = [...prev];
+			if (typeof atIndex === 'number') {
+				next.splice(atIndex + 1, 0, '');
+				return next;
+			}
+			return [...prev, ''];
+		});
+	const addStep = (atIndex?: number) =>
+		setSteps((prev) => {
+			const next = [...prev];
+			if (typeof atIndex === 'number') {
+				next.splice(atIndex + 1, 0, '');
+				return next;
+			}
+			return [...prev, ''];
+		});
+	const focusIngredient = (targetIndex: number) => {
+		requestAnimationFrame(() => {
+			const nodes = document.querySelectorAll<HTMLInputElement>('input[data-ingredient-index]');
+			nodes[targetIndex]?.focus();
+		});
+	};
+
+	const focusStep = (targetIndex: number) => {
+		requestAnimationFrame(() => {
+			const nodes = document.querySelectorAll<HTMLTextAreaElement>('textarea[data-step-index]');
+			nodes[targetIndex]?.focus();
+		});
+	};
+
+	const handleIngredientKeyDown = (index: number, event: React.KeyboardEvent<HTMLInputElement>) => {
+		if (event.key !== 'Enter') return;
+		event.preventDefault();
+		if (!ingredients[index]?.trim()) return;
+		addIngredient(index);
+		focusIngredient(index + 1);
+	};
+
+	const handleStepKeyDown = (index: number, event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+		if (event.key !== 'Enter') return;
+		if (event.shiftKey) return;
+		event.preventDefault();
+		if (!steps[index]?.trim()) return;
+		addStep(index);
+		focusStep(index + 1);
+	};
+
+
+	const removeIngredient = (index: number) => {
+		setIngredients((prev) => (prev.length === 1 ? [''] : prev.filter((_, i) => i !== index)));
+	};
+
+	const removeStep = (index: number) => {
+		setSteps((prev) => (prev.length === 1 ? [''] : prev.filter((_, i) => i !== index)));
+	};
 
 	useEffect(() => {
 		if (!state.redirectTo) return;
@@ -126,26 +202,79 @@ export const CreateRecipeForm = () => {
 				<span className="mt-1 text-xs text-gray-500">Separate tags with commas.</span>
 			</label>
 
-			<label className="flex flex-col text-sm text-gray-700">
-				<span className="font-medium">Ingredients (one per line)</span>
-				<textarea
-					name="ingredients"
-					rows={6}
-					placeholder={`1 cup cooked chickpeas\n2 tbsp harissa paste\n1 preserved lemon peel, minced`}
-					className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
-				/>
-				<span className="mt-1 text-xs text-gray-500">You can include quantity and unit (e.g., "1 cup all-purpose flour").</span>
-			</label>
+			<div className="flex flex-col text-sm text-gray-700">
+				<span className="font-medium">Ingredients</span>
+				<div className="mt-3 space-y-3">
+					{ingredients.map((value, index) => (
+						<div key={index} className="flex items-start gap-3">
+							<input
+								name="ingredients[]"
+								value={value}
+								onChange={(event) => handleIngredientChange(index, event.target.value)}
+								onKeyDown={(event) => handleIngredientKeyDown(index, event)}
+								data-ingredient-index={index}
+								placeholder="e.g., 2 cups chopped kale"
+								className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+							/>
+							<button
+								type="button"
+								onClick={() => removeIngredient(index)}
+								className="text-sm font-medium text-red-600 hover:underline"
+							>
+								Remove
+							</button>
+						</div>
+					))}
+					{state.errors?.ingredients && (
+						<span className="text-xs text-red-600">{state.errors.ingredients}</span>
+					)}
+					<button
+						type="button"
+						onClick={addIngredient}
+						className="text-sm font-medium text-orange-600 hover:underline"
+					>
+						+ Add Ingredient
+					</button>
+				</div>
+				<span className="mt-2 text-xs text-gray-500">
+					Include quantity and unit if relevant, e.g., &quot;1 cup all-purpose flour&quot;.
+				</span>
+			</div>
 
-			<label className="flex flex-col text-sm text-gray-700">
-				<span className="font-medium">Steps (one per line)</span>
-				<textarea
-					name="steps"
-					rows={6}
-					placeholder={`Sauté shallot in olive oil until translucent.\nAdd chickpeas, tomatoes, and preserved lemon; simmer 10 minutes.\nFinish with cilantro and serve with warm flatbread.`}
-					className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
-				/>
-			</label>
+			<div className="flex flex-col text-sm text-gray-700">
+				<span className="font-medium">Instructions</span>
+				<div className="mt-3 space-y-3">
+					{steps.map((value, index) => (
+						<div key={index} className="flex items-start gap-3">
+							<textarea
+								name="steps[]"
+								rows={3}
+								value={value}
+								onChange={(event) => handleStepChange(index, event.target.value)}
+								onKeyDown={(event) => handleStepKeyDown(index, event)}
+								data-step-index={index}
+								placeholder="Describe this step..."
+								className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+							/>
+							<button
+								type="button"
+								onClick={() => removeStep(index)}
+								className="text-sm font-medium text-red-600 hover:underline"
+							>
+								Remove
+							</button>
+						</div>
+					))}
+					{state.errors?.steps && <span className="text-xs text-red-600">{state.errors.steps}</span>}
+					<button
+						type="button"
+						onClick={addStep}
+						className="text-sm font-medium text-orange-600 hover:underline"
+					>
+						+ Add Step
+					</button>
+				</div>
+			</div>
 
 			<button
 				type="submit"
