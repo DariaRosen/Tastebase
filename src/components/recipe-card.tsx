@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { Clock, Users, Heart } from 'lucide-react';
 import { useCallback } from 'react';
 
@@ -44,8 +45,8 @@ export const RecipeCard = ({
 		[id, onToggleSave],
 	);
 
-	return (
-		<article className="group cursor-pointer">
+	const content = (
+		<article className="group h-full cursor-pointer">
 			<div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-gray-100">
 				{imageUrl ? (
 					<Image
@@ -134,6 +135,14 @@ export const RecipeCard = ({
 				)}
 			</div>
 		</article>
+	);
+
+	return onToggleSave ? (
+		<Link href={`/recipe/${id}`} className="block h-full">
+			{content}
+		</Link>
+	) : (
+		content
 	);
 };
 
