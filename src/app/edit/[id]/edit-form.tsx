@@ -104,16 +104,6 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 		setSteps((prev) => (prev.length === 1 ? [''] : prev.filter((_, i) => i !== index)));
 	};
 
-	useEffect(() => {
-		if (!state.message) return;
-		if (!state.errors) {
-			const timeout = setTimeout(() => {
-				router.refresh();
-			}, 500);
-			return () => clearTimeout(timeout);
-		}
-	}, [state.message, state.errors, router]);
-
 	return (
 		<form action={formAction} className="space-y-6">
 			<input type="hidden" name="existingHeroImageUrl" value={initial.heroImageUrl ?? ''} />

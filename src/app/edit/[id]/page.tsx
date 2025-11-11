@@ -98,7 +98,6 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
 	}
 
 	const profile = recipe.profiles;
-	const authorName = profile?.full_name || profile?.username || 'Unknown cook';
 
 	const ingredients = (recipe.recipe_ingredients ?? [])
 		.sort((a, b) => a.position - b.position)
@@ -119,32 +118,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
 		<div className="min-h-screen bg-gray-50">
 			<Header />
 			<main className="container mx-auto px-4 py-10">
-				<div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-					<div className="flex items-center gap-3">
-						<Link
-							href={`/recipe/${recipeId}`}
-							className="inline-flex items-center text-sm font-medium text-orange-600 hover:underline"
-							aria-label="Back to recipe"
-						>
-							← Back to recipe
-						</Link>
-						<div className="flex items-center gap-2 text-sm text-gray-500">
-							{profile?.avatar_url ? (
-								<div className="relative h-8 w-8 overflow-hidden rounded-full bg-gray-200">
-									<Image
-										src={profile.avatar_url}
-										alt={authorName}
-										fill
-										className="object-cover"
-										sizes="32px"
-									/>
-								</div>
-							) : (
-								<div className="h-8 w-8 rounded-full bg-gray-300" />
-							)}
-							<span>{authorName}</span>
-						</div>
-					</div>
+				<div className="mb-6 flex justify-end">
 					<Link
 						href="/"
 						className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
