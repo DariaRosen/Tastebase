@@ -12,7 +12,7 @@ interface RecipeCardProps {
 	prepTime?: number;
 	cookTime?: number;
 	servings?: number;
-	likes?: number;
+	wishlistCount?: number;
 	tags?: string[];
 	isSaved?: boolean;
 	onToggleSave?: (id: string) => void;
@@ -28,7 +28,7 @@ export const RecipeCard = ({
 	prepTime,
 	cookTime,
 	servings,
-	likes,
+	wishlistCount,
 	tags,
 	isSaved,
 	onToggleSave,
@@ -98,10 +98,10 @@ export const RecipeCard = ({
 							<span>{servings} servings</span>
 						</div>
 					)}
-					{likes !== undefined && (
+					{wishlistCount !== undefined && (
 						<div className="flex items-center gap-1">
 							<Heart className="h-4 w-4" />
-							<span>{likes}</span>
+							<span>{wishlistCount ?? 0}</span>
 						</div>
 					)}
 				</div>

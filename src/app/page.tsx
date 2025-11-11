@@ -19,7 +19,7 @@ type RecipeCardData = {
 	prepTime?: number;
 	cookTime?: number;
 	servings?: number;
-	likes?: number;
+	wishlistCount?: number;
 	tags?: string[];
 	publishedAt?: string | null;
 };
@@ -41,7 +41,7 @@ type SupabaseRecipeRow = {
 				avatar_url: string | null;
 		  }
 		| null;
-	recipe_likes: { count: number | null }[] | null;
+	recipe_saves: { count: number | null }[] | null;
 };
 
 export default function Home() {
@@ -98,7 +98,7 @@ export default function Home() {
               username,
               avatar_url
             ),
-            recipe_likes:recipe_likes ( count )
+            recipe_saves:recipe_saves ( count )
           `
 				)
 				.eq('is_published', true)
@@ -121,7 +121,7 @@ export default function Home() {
 
 			const mapped: RecipeCardData[] =
 				((data ?? []) as unknown as SupabaseRecipeRow[]).map((recipe) => {
-					const likeCount = recipe.recipe_likes?.[0]?.count ?? 0;
+					const saveCount = recipe.recipe_saves?.[0]?.count ?? 0;
 					const profile = recipe.profiles;
 					const author =
 						profile?.full_name ||
@@ -137,7 +137,7 @@ export default function Home() {
 						prepTime: recipe.prep_minutes ?? undefined,
 						cookTime: recipe.cook_minutes ?? undefined,
 						servings: recipe.servings ?? undefined,
-						likes: likeCount ?? undefined,
+						wishlistCount: saveCount ?? undefined,
 						tags: recipe.tags ?? undefined,
 						publishedAt: recipe.published_at ?? undefined,
 					};
@@ -146,7 +146,7 @@ export default function Home() {
 			let sorted = mapped;
 			if (activeTab === 'popular') {
 				sorted = [...mapped].sort(
-					(a, b) => (b.likes ?? 0) - (a.likes ?? 0)
+					(a, b) => (b.wishlistCount ?? 0) - (a.wishlistCount ?? 0)
 				);
 			}
 
@@ -202,11 +202,31 @@ export default function Home() {
 					.delete()
 					.eq('user_id', userId)
 					.eq('recipe_id', Number(recipeId));
+				setRecipes((prev) =>
+					prev.map((recipe) =>
+						recipe.id === recipeId
+							? {
+									...recipe,
+									wishlistCount: Math.max((recipe.wishlistCount ?? 1) - 1, 0),
+							  }
+							: recipe,
+					),
+				);
 			} else {
 				await supabase.from('recipe_saves').insert({
 					user_id: userId,
 					recipe_id: Number(recipeId),
 				});
+				setRecipes((prev) =>
+					prev.map((recipe) =>
+						recipe.id === recipeId
+							? {
+									...recipe,
+									wishlistCount: (recipe.wishlistCount ?? 0) + 1,
+							  }
+							: recipe,
+					),
+				);
 			}
 		},
 		[savedIds, supabase, userId],
