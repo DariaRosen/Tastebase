@@ -136,16 +136,16 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 					← Back to recipes
 				</Link>
 
-				<section className="grid gap-8 lg:grid-cols-[2fr,1fr]">
-						<div className="space-y-6">
-							<div className="relative aspect-[16/9] w-full overflow-hidden rounded-3xl bg-gray-200">
+				<section className="mx-auto grid max-w-3xl gap-8 lg:grid-cols-[2fr,1fr]">
+					<div className="space-y-6">
+						<div className="relative mx-auto h-[350px] w-[min(100%,500px)] overflow-hidden rounded-3xl bg-gray-200">
 								{recipe.hero_image_url ? (
 									<Image
 										src={recipe.hero_image_url}
 										alt={recipe.title}
-										fill
-										className="object-cover"
-										sizes="(max-width: 1024px) 100vw, 66vw"
+									fill
+									className="object-cover"
+									sizes="500px"
 										priority
 									/>
 								) : (
