@@ -28,8 +28,14 @@ export async function createRecipeAction(
 	const cookMinutes = parseNumber(formData.get('cookMinutes'));
 	const tagsInput = formData.get('tags')?.toString() ?? '';
 	const heroImageFile = formData.get('heroImage');
-	const ingredientsInput = formData.get('ingredients')?.toString() ?? '';
-	const stepsInput = formData.get('steps')?.toString() ?? '';
+	const ingredientValues = formData
+		.getAll('ingredients[]')
+		.map((value) => value.toString().trim())
+		.filter(Boolean);
+	const stepValues = formData
+		.getAll('steps[]')
+		.map((value) => value.toString().trim())
+		.filter(Boolean);
 
 	const errors: Record<string, string> = {};
 	if (!title) errors.title = 'Title is required.';
@@ -38,9 +44,16 @@ export async function createRecipeAction(
 	if (!prepMinutes && prepMinutes !== 0) errors.prepMinutes = 'Prep minutes must be zero or more.';
 	if (!cookMinutes && cookMinutes !== 0) errors.cookMinutes = 'Cook minutes must be zero or more.';
 
+	if (ingredientValues.length === 0) {
+		errors.ingredients = 'Add at least one ingredient.';
+	}
+	if (stepValues.length === 0) {
+		errors.steps = 'Add at least one step.';
+	}
+
 	if (Object.keys(errors).length > 0) {
 		return { errors, message: 'Please fix the highlighted fields.' };
-}
+	}
 
 	try {
 		const supabase = await createServerSupabase();
@@ -103,11 +116,7 @@ export async function createRecipeAction(
 			return { message: recipeError?.message ?? 'Failed to create recipe.' };
 		}
 
-		const ingredientRows = ingredientsInput
-			.split('\n')
-			.map((line) => line.trim())
-			.filter(Boolean)
-			.map((line, index) => ({
+	const ingredientRows = ingredientValues.map((line, index) => ({
 				recipe_id: recipe.id,
 				position: index,
 				name: line,
@@ -138,11 +147,7 @@ export async function createRecipeAction(
 			}
 		}
 
-		const stepRows = stepsInput
-			.split('\n')
-			.map((line) => line.trim())
-			.filter(Boolean)
-			.map((instruction, index) => ({
+	const stepRows = stepValues.map((instruction, index) => ({
 				recipe_id: recipe.id,
 				position: index,
 				instruction,
