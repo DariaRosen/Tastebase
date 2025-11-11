@@ -22,7 +22,7 @@ type SavedRecipeRow = {
 			username: string | null;
 			avatar_url: string | null;
 		} | null;
-		recipe_likes: { count: number | null }[] | null;
+		recipe_saves: { count: number | null }[] | null;
 	} | null;
 };
 
@@ -36,7 +36,7 @@ type RecipeCardData = {
 	prepTime?: number;
 	cookTime?: number;
 	servings?: number;
-	likes?: number;
+	wishlistCount?: number;
 	tags?: string[];
 };
 
@@ -95,7 +95,7 @@ export default function WishlistPage() {
                 username,
                 avatar_url
               ),
-              recipe_likes:recipe_likes ( count )
+              recipe_saves:recipe_saves ( count )
             )
           `,
 				)
@@ -116,7 +116,7 @@ export default function WishlistPage() {
 					.map((row) => row.recipes)
 					.filter((recipe): recipe is NonNullable<SavedRecipeRow['recipes']> => Boolean(recipe))
 					.map((recipe) => {
-						const likeCount = recipe.recipe_likes?.[0]?.count ?? 0;
+						const saveCount = recipe.recipe_saves?.[0]?.count ?? 0;
 						const profile = recipe.profiles;
 						const author =
 							profile?.full_name || profile?.username || 'Unknown cook';
@@ -130,7 +130,7 @@ export default function WishlistPage() {
 							prepTime: recipe.prep_minutes ?? undefined,
 							cookTime: recipe.cook_minutes ?? undefined,
 							servings: recipe.servings ?? undefined,
-							likes: likeCount ?? undefined,
+							wishlistCount: saveCount ?? undefined,
 							tags: recipe.tags ?? undefined,
 						};
 					});
@@ -178,6 +178,16 @@ export default function WishlistPage() {
 					user_id: userId,
 					recipe_id: Number(recipeId),
 				});
+				setRecipes((prev) =>
+					prev.map((recipe) =>
+						recipe.id === recipeId
+							? {
+									...recipe,
+									wishlistCount: (recipe.wishlistCount ?? 0) + 1,
+							  }
+							: recipe,
+					),
+				);
 			}
 		},
 		[savedIds, supabase, userId],
