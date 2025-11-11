@@ -106,6 +106,14 @@ export const UserMenu = () => {
 				>
 					<div className="px-3 py-2 text-sm font-semibold text-gray-800">{displayName}</div>
 					<Link
+						href="/wishlist"
+						onClick={() => setIsOpen(false)}
+						className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+						role="menuitem"
+					>
+						Wishlist
+					</Link>
+					<Link
 						href="/profile"
 						onClick={() => setIsOpen(false)}
 						className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"

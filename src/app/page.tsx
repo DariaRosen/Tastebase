@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/header';
 import { TabSwitcher } from '@/components/tab-switcher';
@@ -47,29 +47,33 @@ type SupabaseRecipeRow = {
 export default function Home() {
 	const [activeTab, setActiveTab] = useState<Tab>('latest');
 	const [isLoggedIn, setIsLoggedIn] = useState(false);
+	const [userId, setUserId] = useState<string | null>(null);
 	const [recipes, setRecipes] = useState<RecipeCardData[]>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+
+	const supabase = useMemo(() => createClient(), []);
 
 	useEffect(() => {
-		const supabase = createClient();
 		let mounted = true;
 		(async () => {
 			const { data } = await supabase.auth.getUser();
 			if (!mounted) return;
 			setIsLoggedIn(Boolean(data.user));
+			setUserId(data.user?.id ?? null);
 		})();
 		const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
 			setIsLoggedIn(Boolean(session?.user));
+			setUserId(session?.user?.id ?? null);
 		});
 		return () => {
 			mounted = false;
 			sub.subscription.unsubscribe();
 		};
-	}, []);
+	}, [supabase]);
 
 	useEffect(() => {
-		const supabase = createClient();
 		let mounted = true;
 
 		const loadRecipes = async () => {
@@ -147,6 +151,22 @@ export default function Home() {
 			}
 
 			setRecipes(sorted);
+
+			if (userId) {
+				const { data: savedData } = await supabase
+					.from('recipe_saves')
+					.select('recipe_id')
+					.eq('user_id', userId);
+				if (mounted) {
+					setSavedIds(
+						new Set(
+							(savedData ?? []).map((item) => item.recipe_id.toString()),
+						),
+					);
+				}
+			} else {
+				setSavedIds(new Set());
+			}
 			setIsLoading(false);
 		};
 
@@ -155,7 +175,42 @@ export default function Home() {
 		return () => {
 			mounted = false;
 		};
-	}, [activeTab]);
+	}, [activeTab, supabase, userId]);
+
+	const handleToggleSave = useCallback(
+		async (recipeId: string) => {
+			if (!userId) {
+				setError('Please sign in to use your wishlist.');
+				setTimeout(() => setError(null), 2000);
+				return;
+			}
+
+			const currentlySaved = savedIds.has(recipeId);
+			setSavedIds((prev) => {
+				const next = new Set(prev);
+				if (next.has(recipeId)) {
+					next.delete(recipeId);
+				} else {
+					next.add(recipeId);
+				}
+				return next;
+			});
+
+			if (currentlySaved) {
+				await supabase
+					.from('recipe_saves')
+					.delete()
+					.eq('user_id', userId)
+					.eq('recipe_id', Number(recipeId));
+			} else {
+				await supabase.from('recipe_saves').insert({
+					user_id: userId,
+					recipe_id: Number(recipeId),
+				});
+			}
+		},
+		[savedIds, supabase, userId],
+	);
 
 	return (
 		<div className="min-h-screen bg-gray-50">
@@ -201,7 +256,12 @@ export default function Home() {
 					) : recipes.length > 0 ? (
 						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
 							{recipes.map((recipe) => (
-								<RecipeCard key={recipe.id} {...recipe} />
+								<RecipeCard
+									key={recipe.id}
+									{...recipe}
+									isSaved={savedIds.has(recipe.id)}
+									onToggleSave={handleToggleSave}
+								/>
 							))}
 						</div>
 					) : (
