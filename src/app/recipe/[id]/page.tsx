@@ -7,6 +7,7 @@ import { SaveRecipeToggle } from '@/components/save-recipe-toggle';
 
 type RecipeDetailRow = {
 	id: number;
+	author_id: string | null;
 	title: string;
 	description: string | null;
 	hero_image_url: string | null;
@@ -54,6 +55,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 		.select(
 			`
         id,
+        author_id,
         title,
         description,
         hero_image_url,
@@ -111,13 +113,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 			.limit(1)
 			.maybeSingle();
 		isSaved = Boolean(saved);
-	} else {
-		console.info('[RecipeDetail] user not signed in; wishlist toggle requires login');
 	}
 
 	const wishlistCount = recipe.recipe_saves?.[0]?.count ?? 0;
 	const profile = recipe.profiles;
 	const authorName = profile?.full_name || profile?.username || 'Unknown cook';
+	const isOwner = user?.id && recipe.author_id === user.id;
 
 	const ingredients = (recipe.recipe_ingredients ?? []).sort(
 		(a, b) => a.position - b.position,
@@ -129,6 +130,14 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 			<Header />
 			<main className="container mx-auto px-4 py-10">
 				<div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
+					{isOwner && (
+						<Link
+							href={`/edit/${recipe.id}`}
+							className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+						>
+							Edit recipe
+						</Link>
+					)}
 					<Link
 						href="/"
 						className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
