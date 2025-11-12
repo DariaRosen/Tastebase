@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Tastebase favicon">
-  <rect width="64" height="64" rx="12" fill="#fff6ef" />
-  <path d="M20 30h24v14a6 6 0 0 1-6 6H26a6 6 0 0 1-6-6V30Z" fill="#ff7133"/>
-  <path d="M32 12a9 9 0 0 0-17 3.5c0 3 2 5.5 4.6 6.4a6 6 0 0 0-1.6 4v2.1h24V26a6 6 0 0 0-1.6-4c2.6-.9 4.6-3.4 4.6-6.4A9 9 0 0 0 32 12Z" fill="#2f2a26"/>
-  <path d="M24 30h4v14a2 2 0 0 1-4 0V30Zm12 0h4v14a2 2 0 0 1-4 0V30Z" fill="#fff6ef"/>
-  <path d="M43.5 43.5 32 32" stroke="#ff9133" stroke-width="4" stroke-linecap="round"/>
-  <path d="M46 39c1.7 1.7-2 8-4 6s4.1-7.7 4-6Z" fill="#ff9133"/>
-</svg>
