@@ -6,7 +6,6 @@ import { Header } from '@/components/header';
 import { TabSwitcher } from '@/components/tab-switcher';
 import { RecipeCard } from '@/components/recipe-card';
 import { createClient } from '@/lib/supabase';
-import { FilterBar } from '@/components/filter-bar';
 
 type Tab = 'latest' | 'popular';
 
@@ -347,16 +346,6 @@ export default function Home() {
 				</div>
 
 				<TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
-
-				<FilterBar
-					categories={availableCategories}
-					selectedCategories={selectedCategories}
-					onToggleCategory={handleToggleCategory}
-					difficulties={availableDifficulties}
-					selectedDifficulty={selectedDifficulty}
-					onSelectDifficulty={handleSelectDifficulty}
-					onClear={handleClearFilters}
-				/>
 
 				<div className="mt-8">
 					{isLoading ? (
