@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Tastebase - Discover Amazing Recipes",
   description: "Share, discover, and save delicious recipes from our community of home cooks",
+  icons: {
+    icon: "/favicon.png",
+  },
 };
 
 export default function RootLayout({
