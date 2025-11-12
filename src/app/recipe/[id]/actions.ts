@@ -10,7 +10,7 @@ export interface DeleteRecipeResult {
 
 export async function deleteRecipeAction(recipeId: number): Promise<DeleteRecipeResult> {
   try {
-    const supabase = await createServerSupabase();
+    const supabase = await createServerSupabase({ shouldSetCookies: true });
     const {
       data: { user },
     } = await supabase.auth.getUser();
