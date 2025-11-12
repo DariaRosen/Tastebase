@@ -25,7 +25,7 @@ A full-featured recipe discovery platform built with Next.js 16 App Router, Supa
 ---
 
 ## Live Demo
-- **Production**: [tastebase.vercel.app](https://tastebase.vercel.app)
+- **Production**: [tastebase.vercel.app](https://tastebase-phi.vercel.app/)
 - **Repository**: [github.com/DariaRosen/Tastebase](https://github.com/DariaRosen/Tastebase)
 
 ---
