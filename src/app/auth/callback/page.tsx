@@ -13,7 +13,15 @@ export default function AuthCallbackPage() {
 		const supabase = createClient();
 		(async () => {
 			try {
-				const { error } = await supabase.auth.exchangeCodeForSession();
+				const params = new URLSearchParams(window.location.search);
+				const code = params.get('code');
+				if (!code) {
+					setStatus('error');
+					setMessage('Missing authorization code.');
+					return;
+				}
+
+				const { error } = await supabase.auth.exchangeCodeForSession(code);
 				if (error) {
 					setStatus('error');
 					setMessage(error.message);
