@@ -107,25 +107,24 @@ export const UserMenu = () => {
 	return (
 		<div className="relative" data-user-menu-root onBlur={handleBlur}>
 			<button
-				ref={triggerRef}
 				onClick={() => setIsOpen((prev) => !prev)}
 				className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-secondary text-white"
 				aria-label="Open user menu"
 			>
-				{initials}
+				{initial}
 			</button>
 			{isOpen && (
 				<div
-					className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 bg-white p-1 shadow-lg"
+					className="absolute right-0 mt-2 w-48 rounded-lg border border-border-subtle bg-white p-1 shadow-lg"
 					role="menu"
 					tabIndex={0}
 					onKeyDown={(e) => e.key === 'Escape' && setIsOpen(false)}
 				>
-					<div className="px-3 py-2 text-sm font-semibold text-gray-800">{displayName}</div>
+					<div className="px-3 py-2 text-sm font-semibold text-brand-secondary">{displayName}</div>
 					<Link
 						href="/wishlist"
 						onClick={() => setIsOpen(false)}
-						className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+						className="block rounded-md px-3 py-2 text-sm text-brand-secondary/80 hover:bg-brand-cream"
 						role="menuitem"
 					>
 						Wishlist
@@ -133,7 +132,7 @@ export const UserMenu = () => {
 					<Link
 						href="/my-recipes"
 						onClick={() => setIsOpen(false)}
-						className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+						className="block rounded-md px-3 py-2 text-sm text-brand-secondary/80 hover:bg-brand-cream"
 						role="menuitem"
 					>
 						My recipes
@@ -141,14 +140,14 @@ export const UserMenu = () => {
 					<Link
 						href="/profile"
 						onClick={() => setIsOpen(false)}
-						className="block rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+						className="block rounded-md px-3 py-2 text-sm text-brand-secondary/80 hover:bg-brand-cream"
 						role="menuitem"
 					>
 						Profile
 					</Link>
 					<button
 						onClick={handleSignOut}
-						className="w-full rounded-md px-3 py-2 text-left text-sm text-gray-700 hover:bg-gray-50"
+						className="w-full rounded-md px-3 py-2 text-left text-sm text-brand-secondary/80 hover:bg-brand-cream"
 						role="menuitem"
 					>
 						Sign out
