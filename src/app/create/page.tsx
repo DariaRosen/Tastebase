@@ -15,9 +15,9 @@ export default function CreateRecipePage() {
 					</div>
 					<Link
 						href="/"
-						className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+						className="inline-flex items-center justify-center rounded-full bg-orange-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
 					>
-						← Back to recipes
+						Back to recipes
 					</Link>
 				</div>
 				<div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
