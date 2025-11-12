@@ -230,7 +230,7 @@ export const CreateRecipeForm = () => {
 					)}
 					<button
 						type="button"
-						onClick={addIngredient}
+						onClick={() => addIngredient()}
 						className="text-sm font-medium text-orange-600 hover:underline"
 					>
 						+ Add Ingredient
@@ -268,7 +268,7 @@ export const CreateRecipeForm = () => {
 					{state.errors?.steps && <span className="text-xs text-red-600">{state.errors.steps}</span>}
 					<button
 						type="button"
-						onClick={addStep}
+						onClick={() => addStep()}
 						className="text-sm font-medium text-orange-600 hover:underline"
 					>
 						+ Add Step
