@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
@@ -97,21 +98,35 @@ export const UserMenu = () => {
 
 	const displayName = user.username ?? user.email ?? 'Account';
 	const initial = displayName[0]?.toUpperCase() ?? 'U';
-
 	const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
 		if (!event.currentTarget.contains(event.relatedTarget)) {
 			setIsOpen(false);
 		}
 	};
 
+	const hasAvatar = Boolean(user.avatarUrl);
+	const triggerClasses = hasAvatar
+		? 'inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border-subtle'
+		: 'inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-secondary text-white';
+
 	return (
 		<div className="relative" data-user-menu-root onBlur={handleBlur}>
 			<button
 				onClick={() => setIsOpen((prev) => !prev)}
-				className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-secondary text-white"
+				className={triggerClasses}
 				aria-label="Open user menu"
 			>
-				{initial}
+				{hasAvatar ? (
+					<Image
+						src={user.avatarUrl as string}
+						alt={`${displayName} avatar`}
+						width={36}
+						height={36}
+						className="h-9 w-9 rounded-full object-cover"
+					/>
+				) : (
+					initial
+				)}
 			</button>
 			{isOpen && (
 				<div
