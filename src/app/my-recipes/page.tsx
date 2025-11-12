@@ -28,6 +28,8 @@ type RecipeCardData = {
   servings?: number;
   wishlistCount?: number;
   tags?: string[];
+  authorName: string;
+  authorAvatar?: string;
 };
 
 export default function MyRecipesPage() {
@@ -101,6 +103,8 @@ export default function MyRecipesPage() {
         servings: recipe.servings ?? undefined,
         wishlistCount: recipe.recipe_saves?.[0]?.count ?? undefined,
         tags: recipe.tags ?? undefined,
+        authorName: 'You',
+        authorAvatar: undefined,
       }));
 
       setRecipes(mapped);
