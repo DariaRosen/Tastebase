@@ -16,10 +16,13 @@ interface EditRecipeFormProps {
 		tags: string[];
 		ingredients: string[];
 		steps: string[];
+		difficulty: string;
 	};
 }
 
 const initialState: UpdateRecipeState = {};
+
+const difficultyOptions = ['Easy', 'Intermediate', 'Advanced'] as const;
 
 export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 	const router = useRouter();
@@ -28,6 +31,7 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 
 	const [ingredients, setIngredients] = useState<string[]>(initial.ingredients.length > 0 ? initial.ingredients : ['']);
 	const [steps, setSteps] = useState<string[]>(initial.steps.length > 0 ? initial.steps : ['']);
+	const [difficulty, setDifficulty] = useState<string>(initial.difficulty ?? 'Easy');
 
 	const handleIngredientChange = (index: number, value: string) => {
 		setIngredients((prev) => {
@@ -208,15 +212,48 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 				</label>
 			</div>
 
-			<label className="flex flex-col text-sm text-gray-700">
-				<span className="font-medium">Tags</span>
-				<input
-					name="tags"
-					defaultValue={initial.tags.join(', ')}
-					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
-				/>
-				<span className="mt-1 text-xs text-gray-500">Separate tags with commas.</span>
-			</label>
+			<div className="grid gap-6 md:grid-cols-2">
+				<div className="space-y-2">
+					<span className="text-sm font-medium text-gray-700">Difficulty</span>
+					<div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+						{difficultyOptions.map((option) => {
+							const inputId = `edit-difficulty-${option.toLowerCase()}`;
+							return (
+								<label
+									key={option}
+									htmlFor={inputId}
+									className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium shadow-sm transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-secondary ${
+										difficulty === option
+											? 'border-brand-primary bg-brand-cream-soft text-brand-secondary'
+											: 'border-border-subtle text-gray-600 hover:bg-brand-cream'
+									}`}
+								>
+									<input
+										id={inputId}
+										type="radio"
+										name="difficulty"
+										value={option}
+										checked={difficulty === option}
+										onChange={(event) => setDifficulty(event.target.value)}
+										className="sr-only"
+									/>
+									{option}
+								</label>
+							);
+						})}
+					</div>
+					{state.errors?.difficulty && <span className="text-xs text-red-600">{state.errors.difficulty}</span>}
+				</div>
+				<label className="flex flex-col text-sm text-gray-700">
+					<span className="font-medium">Tags</span>
+					<input
+						name="tags"
+						defaultValue={initial.tags.join(', ')}
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
+					/>
+					<span className="mt-1 text-xs text-gray-500">Separate tags with commas.</span>
+				</label>
+			</div>
 
 			<div className="flex flex-col text-sm text-gray-700">
 				<span className="font-medium">Ingredients</span>

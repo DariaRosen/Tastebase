@@ -17,6 +17,7 @@ type SavedRecipeRow = {
     prep_minutes: number | null;
     cook_minutes: number | null;
     tags: string[] | null;
+    difficulty: string | null;
     profiles: {
       full_name: string | null;
       username: string | null;
@@ -38,6 +39,7 @@ type RecipeCardData = {
   servings?: number;
   wishlistCount?: number;
   tags?: string[];
+  difficulty?: string;
 };
 
 export default function WishlistPage() {
@@ -90,6 +92,7 @@ export default function WishlistPage() {
             prep_minutes,
             cook_minutes,
             tags,
+            difficulty,
             profiles:profiles!recipes_author_id_fkey (
               full_name,
               username,
@@ -130,6 +133,7 @@ export default function WishlistPage() {
             servings: recipe.servings ?? undefined,
             wishlistCount: saveCount ?? undefined,
             tags: recipe.tags ?? undefined,
+            difficulty: recipe.difficulty ?? undefined,
           };
         });
 
