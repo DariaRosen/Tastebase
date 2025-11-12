@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { Search, LogIn } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
@@ -35,8 +36,16 @@ export const Header = () => {
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
-        <Link href="/" className="flex items-center space-x-2">
-          <span className="text-2xl font-bold text-orange-600">Tastebase</span>
+        <Link href="/" className="flex items-center space-x-3">
+          <Image
+            src="/favicon.png"
+            alt="Tastebase logo"
+            width={32}
+            height={32}
+            className="h-9 w-9 rounded-md"
+            priority
+          />
+          <span className="text-3xl font-bold text-orange-600 md:text-4xl">Tastebase</span>
         </Link>
 
         <nav className="hidden md:flex items-center space-x-6">
