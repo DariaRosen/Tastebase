@@ -34,18 +34,18 @@ export const Header = () => {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="container mx-auto flex h-16 items-center justify-between px-4">
+    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+      <div className="container mx-auto flex h-20 items-center justify-between px-4">
         <Link href="/" className="flex items-center space-x-3">
           <Image
             src="/favicon.png"
             alt="Tastebase logo"
-            width={32}
-            height={32}
-            className="h-9 w-9 rounded-md"
+            width={56}
+            height={56}
+            className="h-12 w-12 rounded-lg"
             priority
           />
-          <span className="text-3xl font-bold text-orange-600 md:text-4xl">Tastebase</span>
+          <span className="text-4xl font-bold text-orange-600 md:text-5xl">Tastebase</span>
         </Link>
 
         <nav className="hidden md:flex items-center space-x-6">
