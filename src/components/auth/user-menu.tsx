@@ -10,6 +10,7 @@ interface UserInfo {
 	id: string;
 	email?: string;
 	username?: string;
+	fullName?: string;
 	avatarUrl?: string | null;
 }
 
@@ -26,20 +27,22 @@ export const UserMenu = () => {
 
 			const metadata = (authUser.user_metadata ?? {}) as Record<string, unknown>;
 			const initialUsername = typeof metadata.username === 'string' ? metadata.username : undefined;
+			const initialFullName = typeof metadata.full_name === 'string' ? metadata.full_name : undefined;
 			const initialAvatar = typeof metadata.avatar_url === 'string' ? metadata.avatar_url : undefined;
 
-			if (initialUsername && initialAvatar) {
+			if (initialUsername && initialAvatar && initialFullName) {
 				return {
 					id: authUser.id,
 					email: authUser.email ?? undefined,
 					username: initialUsername,
+					fullName: initialFullName,
 					avatarUrl: initialAvatar,
 				};
 			}
 
 			const { data: profile } = await supabase
 				.from('profiles')
-				.select('username, avatar_url')
+				.select('username, full_name, avatar_url')
 				.eq('id', authUser.id)
 				.single();
 
@@ -47,6 +50,7 @@ export const UserMenu = () => {
 				id: authUser.id,
 				email: authUser.email ?? undefined,
 				username: profile?.username ?? initialUsername,
+				fullName: profile?.full_name ?? initialFullName,
 				avatarUrl: profile?.avatar_url ?? initialAvatar ?? null,
 			};
 		};
@@ -96,7 +100,7 @@ export const UserMenu = () => {
 
 	if (!user) return null;
 
-	const displayName = user.username ?? user.email ?? 'Account';
+	const displayName = (user.fullName?.trim() || user.username || user.email || 'Account') as string;
 	const initial = displayName[0]?.toUpperCase() ?? 'U';
 	const handleBlur = (event: React.FocusEvent<HTMLDivElement>) => {
 		if (!event.currentTarget.contains(event.relatedTarget)) {
