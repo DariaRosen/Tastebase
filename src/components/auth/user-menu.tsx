@@ -106,8 +106,8 @@ export const UserMenu = () => {
 
 	const hasAvatar = Boolean(user.avatarUrl);
 	const triggerClasses = hasAvatar
-		? 'inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-border-subtle'
-		: 'inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-secondary text-white';
+		? 'inline-flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border-subtle'
+		: 'inline-flex h-10 w-10 items-center justify-center rounded-full bg-brand-secondary text-white';
 
 	return (
 		<div className="relative" data-user-menu-root onBlur={handleBlur}>
@@ -120,9 +120,9 @@ export const UserMenu = () => {
 					<Image
 						src={user.avatarUrl as string}
 						alt={`${displayName} avatar`}
-						width={36}
-						height={36}
-						className="h-9 w-9 rounded-full object-cover"
+						width={40}
+						height={40}
+						className="h-10 w-10 rounded-full object-cover"
 					/>
 				) : (
 					initial
