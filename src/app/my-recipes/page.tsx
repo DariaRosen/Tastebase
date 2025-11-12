@@ -6,6 +6,8 @@ import { Header } from '@/components/header';
 import { RecipeCard } from '@/components/recipe-card';
 import { createClient } from '@/lib/supabase';
 
+export const dynamic = 'force-dynamic';
+
 type OwnedRecipeRow = {
   id: number;
   title: string;
