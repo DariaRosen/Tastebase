@@ -6,6 +6,7 @@ import { Header } from '@/components/header';
 import { TabSwitcher } from '@/components/tab-switcher';
 import { RecipeCard } from '@/components/recipe-card';
 import { createClient } from '@/lib/supabase';
+import { FilterBar } from '@/components/filter-bar';
 
 type Tab = 'latest' | 'popular';
 
@@ -54,6 +55,8 @@ export default function Home() {
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+	const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+	const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
 
 	const supabase = useMemo(() => createClient(), []);
 
@@ -236,32 +239,124 @@ export default function Home() {
 		[savedIds, supabase, userId],
 	);
 
+	const availableCategories = useMemo(() => {
+		const categorySet = new Set<string>();
+		recipes.forEach((recipe) => {
+			(recipe.tags ?? []).forEach((tag) => {
+				if (tag.trim()) {
+					categorySet.add(tag.trim());
+				}
+			});
+		});
+		return Array.from(categorySet).sort((a, b) => a.localeCompare(b));
+	}, [recipes]);
+
+	const availableDifficulties = ['Easy', 'Intermediate', 'Advanced'];
+
+	const filteredRecipes = useMemo(() => {
+		return recipes.filter((recipe) => {
+			const matchesDifficulty = selectedDifficulty ? recipe.difficulty === selectedDifficulty : true;
+			const matchesCategory = selectedCategory ? (recipe.tags ?? []).includes(selectedCategory) : true;
+			return matchesDifficulty && matchesCategory;
+		});
+	}, [recipes, selectedCategory, selectedDifficulty]);
+
+	const hasActiveFilters = Boolean(selectedCategory || selectedDifficulty);
+
+	const handleSelectCategory = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
+		const value = event.target.value;
+		setSelectedCategory(value === 'ALL' ? null : value);
+	}, []);
+
+	const handleSelectDifficulty = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
+		const value = event.target.value;
+		setSelectedDifficulty(value === 'ALL' ? null : value);
+	}, []);
+
+	const handleClearFilters = useCallback(() => {
+		setSelectedCategory(null);
+		setSelectedDifficulty(null);
+	}, []);
+
 	return (
 		<div className="min-h-screen bg-brand-cream-soft">
 			<Header />
 
 			<main className="container mx-auto px-4 py-8">
-				<div className="mb-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+				<div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
 					<div>
-						<h1 className="mb-2 text-3xl font-bold text-brand-secondary">
-							Discover Amazing Recipes
-						</h1>
-						<p className="text-gray-600">
-							Explore delicious recipes from our community of home cooks
-						</p>
+						<h1 className="mb-2 text-3xl font-bold text-brand-secondary">Discover Amazing Recipes</h1>
+						<p className="text-gray-600">Explore delicious recipes from our community of home cooks</p>
 					</div>
-					{isLoggedIn && (
-						<Link
-							href="/create"
-							className="inline-flex items-center justify-center rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
-							aria-label="Add new recipe"
-						>
-							Add new recipe
-						</Link>
-					)}
+					<div className="flex flex-wrap items-center gap-2">
+						<div className="flex flex-col text-xs uppercase tracking-wide text-gray-500">
+							<label htmlFor="category-filter" className="mb-1 text-[0.65rem] font-semibold text-brand-secondary">
+								Category
+							</label>
+							<select
+								id="category-filter"
+								value={selectedCategory ?? 'ALL'}
+								onChange={handleSelectCategory}
+								className="h-10 rounded-full border border-border-subtle bg-white px-4 text-sm text-brand-secondary/80 shadow-sm focus:border-brand-secondary focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
+							>
+								<option value="ALL">All categories</option>
+								{availableCategories.map((category) => (
+									<option key={category} value={category}>
+										{category}
+									</option>
+								))}
+							</select>
+						</div>
+						<div className="flex flex-col text-xs uppercase tracking-wide text-gray-500">
+							<label htmlFor="difficulty-filter" className="mb-1 text-[0.65rem] font-semibold text-brand-secondary">
+								Difficulty
+							</label>
+							<select
+								id="difficulty-filter"
+								value={selectedDifficulty ?? 'ALL'}
+								onChange={handleSelectDifficulty}
+								className="h-10 rounded-full border border-border-subtle bg-white px-4 text-sm text-brand-secondary/80 shadow-sm focus:border-brand-secondary focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
+							>
+								<option value="ALL">All difficulties</option>
+								{availableDifficulties.map((difficulty) => (
+									<option key={difficulty} value={difficulty}>
+										{difficulty}
+									</option>
+								))}
+							</select>
+						</div>
+						{hasActiveFilters && (
+							<button
+								type="button"
+								onClick={handleClearFilters}
+								className="text-sm font-medium text-brand-primary hover:underline"
+							>
+								Clear
+							</button>
+						)}
+						{isLoggedIn && (
+							<Link
+								href="/create"
+								className="inline-flex items-center justify-center rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
+								aria-label="Add new recipe"
+							>
+								Add new recipe
+							</Link>
+						)}
+					</div>
 				</div>
 
 				<TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
+
+				<FilterBar
+					categories={availableCategories}
+					selectedCategories={selectedCategories}
+					onToggleCategory={handleToggleCategory}
+					difficulties={availableDifficulties}
+					selectedDifficulty={selectedDifficulty}
+					onSelectDifficulty={handleSelectDifficulty}
+					onClear={handleClearFilters}
+				/>
 
 				<div className="mt-8">
 					{isLoading ? (
@@ -277,9 +372,9 @@ export default function Home() {
 						<div className="rounded-xl border border-brand-accent/30 bg-brand-cream-soft p-6 text-center text-brand-accent">
 							{error}
 						</div>
-					) : recipes.length > 0 ? (
+					) : filteredRecipes.length > 0 ? (
 						<div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-							{recipes.map((recipe) => (
+							{filteredRecipes.map((recipe) => (
 								<RecipeCard
 									key={recipe.id}
 									{...recipe}
@@ -290,9 +385,11 @@ export default function Home() {
 						</div>
 					) : (
 						<div className="flex flex-col items-center justify-center rounded-xl border border-border-subtle bg-white p-12 text-center">
-							<p className="mb-2 text-lg text-gray-600">No recipes found</p>
+							<p className="mb-2 text-lg text-gray-600">No recipes match the current filters</p>
 							<p className="text-sm text-gray-500">
-								Be the first to share a recipe!
+								{hasActiveFilters
+									? 'Try clearing or adjusting the filters to see more recipes.'
+									: 'Be the first to share a recipe!'}
 							</p>
 						</div>
 					)}
