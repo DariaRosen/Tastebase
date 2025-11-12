@@ -53,7 +53,7 @@ export async function updateRecipeAction(
 	}
 
 	try {
-		const supabase = await createServerSupabase();
+		const supabase = await createServerSupabase({ shouldSetCookies: true });
 		const {
 			data: { user },
 		} = await supabase.auth.getUser();
