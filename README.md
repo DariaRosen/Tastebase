@@ -54,7 +54,7 @@ A full-featured recipe discovery platform built with Next.js 16 App Router, Supa
 ## Screenshots
 > Add screenshots (Home, Recipe Detail, Create Recipe, Wishlist, Profile) to `public/screenshots/` and embed them here:
 > ```md
-> ![Tastebase Home](public/screenshots/home.png)
+> ![Tastebase Home](public/Tastebase.PNG)
 > ```
 
 ---
