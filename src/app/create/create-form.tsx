@@ -104,7 +104,7 @@ export const CreateRecipeForm = () => {
 						required
 						minLength={3}
 						placeholder="Smoky Harissa Chickpea Skillet"
-						className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 						aria-describedby={state.errors?.title ? 'title-error' : undefined}
 					/>
 					{state.errors?.title && <span id="title-error" className="mt-1 text-xs text-red-600">{state.errors.title}</span>}
@@ -128,7 +128,7 @@ export const CreateRecipeForm = () => {
 					required
 					rows={3}
 					placeholder="One-pan chickpeas in harissa tomato sauce with preserved lemon and herbs."
-					className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 					aria-describedby={state.errors?.description ? 'description-error' : undefined}
 				/>
 				{state.errors?.description && (
@@ -147,7 +147,7 @@ export const CreateRecipeForm = () => {
 						required
 						min={1}
 						placeholder="4"
-						className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 						aria-describedby={state.errors?.servings ? 'servings-error' : undefined}
 					/>
 					{state.errors?.servings && (
@@ -164,7 +164,7 @@ export const CreateRecipeForm = () => {
 						required
 						min={0}
 						placeholder="10"
-						className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 						aria-describedby={state.errors?.prepMinutes ? 'prepMinutes-error' : undefined}
 					/>
 					{state.errors?.prepMinutes && (
@@ -181,7 +181,7 @@ export const CreateRecipeForm = () => {
 						required
 						min={0}
 						placeholder="20"
-						className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 						aria-describedby={state.errors?.cookMinutes ? 'cookMinutes-error' : undefined}
 					/>
 					{state.errors?.cookMinutes && (
@@ -197,7 +197,7 @@ export const CreateRecipeForm = () => {
 				<input
 					name="tags"
 					placeholder="vegan, spicy, one-pan"
-					className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 				/>
 				<span className="mt-1 text-xs text-gray-500">Separate tags with commas.</span>
 			</label>
@@ -214,7 +214,7 @@ export const CreateRecipeForm = () => {
 								onKeyDown={(event) => handleIngredientKeyDown(index, event)}
 								data-ingredient-index={index}
 								placeholder="e.g., 2 cups chopped kale"
-								className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+								className="flex-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 							/>
 							<button
 								type="button"
@@ -231,7 +231,7 @@ export const CreateRecipeForm = () => {
 					<button
 						type="button"
 						onClick={() => addIngredient()}
-						className="text-sm font-medium text-orange-600 hover:underline"
+						className="text-sm font-medium text-brand-primary hover:underline"
 					>
 						+ Add Ingredient
 					</button>
@@ -254,7 +254,7 @@ export const CreateRecipeForm = () => {
 								onKeyDown={(event) => handleStepKeyDown(index, event)}
 								data-step-index={index}
 								placeholder="Describe this step..."
-								className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+								className="flex-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 							/>
 							<button
 								type="button"
@@ -269,7 +269,7 @@ export const CreateRecipeForm = () => {
 					<button
 						type="button"
 						onClick={() => addStep()}
-						className="text-sm font-medium text-orange-600 hover:underline"
+						className="text-sm font-medium text-brand-primary hover:underline"
 					>
 						+ Add Step
 					</button>
@@ -279,7 +279,7 @@ export const CreateRecipeForm = () => {
 			<button
 				type="submit"
 				disabled={isPending}
-				className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-60"
+				className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:opacity-60"
 			>
 				{isPending ? 'Publishing…' : 'Publish recipe'}
 			</button>

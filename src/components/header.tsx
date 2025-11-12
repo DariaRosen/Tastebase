@@ -58,18 +58,18 @@ export const Header = () => {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border-subtle bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/70">
       <div className="container mx-auto flex h-20 items-center justify-between px-4">
-        <Link href="/" className="flex items-center space-x-3">
+        <Link href="/" className="flex items-center space-x-3" aria-label="Tastebase home">
           <Image
             src="/favicon.png"
             alt="Tastebase logo"
             width={56}
             height={56}
-            className="h-12 w-12 rounded-lg"
+            className="h-14 w-14 rounded-md"
             priority
           />
-          <span className="text-4xl font-bold text-orange-600 md:text-5xl">Tastebase</span>
+          <span className="text-4xl font-bold text-brand-secondary md:text-5xl">Tastebase</span>
         </Link>
 
         <form
@@ -82,12 +82,12 @@ export const Header = () => {
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             placeholder="Find a recipe or ingredient"
-            className="h-12 w-full rounded-l-full border border-gray-300 bg-white px-5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+            className="h-12 w-full rounded-l-full border border-border-subtle bg-white px-5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
             aria-label="Search for recipes"
           />
           <button
             type="submit"
-            className="flex h-12 w-14 items-center justify-center rounded-r-full bg-orange-600 text-white transition hover:bg-orange-700"
+            className="flex h-12 w-14 items-center justify-center rounded-r-full bg-brand-primary text-white transition hover:bg-brand-primary-hover"
             aria-label="Search"
           >
             <Search className="h-5 w-5" />
@@ -101,13 +101,13 @@ export const Header = () => {
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
               placeholder="Search"
-              className="h-10 w-40 rounded-xl border border-gray-300 bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none"
+              className="h-10 w-40 rounded-xl border border-border-subtle bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none"
               aria-label="Search for recipes"
             />
             <button
               type="button"
               onClick={handleMobileSearch}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-orange-600 text-white hover:bg-orange-700"
+              className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary text-white hover:bg-brand-primary-hover"
               aria-label="Search"
             >
               <Search className="h-4 w-4" />
@@ -118,7 +118,7 @@ export const Header = () => {
           ) : (
             <button
               onClick={() => setIsAuthOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-brand-cream hover:text-brand-secondary"
               aria-label="Sign in"
             >
               <LogIn className="h-4 w-4" />

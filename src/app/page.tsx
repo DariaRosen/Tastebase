@@ -233,13 +233,13 @@ export default function Home() {
 	);
 
 	return (
-		<div className="min-h-screen bg-gray-50">
+		<div className="min-h-screen bg-brand-cream-soft">
 			<Header />
 
 			<main className="container mx-auto px-4 py-8">
 				<div className="mb-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
 					<div>
-						<h1 className="mb-2 text-3xl font-bold text-gray-900">
+						<h1 className="mb-2 text-3xl font-bold text-brand-secondary">
 							Discover Amazing Recipes
 						</h1>
 						<p className="text-gray-600">
@@ -249,7 +249,7 @@ export default function Home() {
 					{isLoggedIn && (
 						<Link
 							href="/create"
-							className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+							className="inline-flex items-center justify-center rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
 							aria-label="Add new recipe"
 						>
 							Add new recipe
@@ -265,12 +265,12 @@ export default function Home() {
 							{Array.from({ length: 6 }).map((_, index) => (
 								<div
 									key={index}
-									className="h-72 animate-pulse rounded-xl bg-gray-200"
+									className="h-72 animate-pulse rounded-xl bg-brand-cream/60"
 								/>
 							))}
 						</div>
 					) : error ? (
-						<div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-red-600">
+						<div className="rounded-xl border border-brand-accent/30 bg-brand-cream-soft p-6 text-center text-brand-accent">
 							{error}
 						</div>
 					) : recipes.length > 0 ? (
@@ -285,7 +285,7 @@ export default function Home() {
 							))}
 						</div>
 					) : (
-						<div className="flex flex-col items-center justify-center py-16 text-center">
+						<div className="flex flex-col items-center justify-center rounded-xl border border-border-subtle bg-white p-12 text-center">
 							<p className="mb-2 text-lg text-gray-600">No recipes found</p>
 							<p className="text-sm text-gray-500">
 								Be the first to share a recipe!

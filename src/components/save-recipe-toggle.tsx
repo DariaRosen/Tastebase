@@ -63,14 +63,14 @@ export const SaveRecipeToggle = ({
 					type="button"
 					onClick={toggleSave}
 					disabled={isPending}
-					className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-orange-600/10 text-orange-600 transition hover:bg-orange-600/20 disabled:opacity-60"
+					className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary transition hover:bg-brand-primary/20 disabled:opacity-60"
 					aria-label={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}
 				>
 					<Heart
 						className="h-5 w-5"
-						fill={isSaved ? '#ea580c' : 'transparent'}
+						fill={isSaved ? '#f57402' : 'transparent'}
 						strokeWidth={isSaved ? 1.5 : 2}
-						color="#ea580c"
+						color={isSaved ? '#f57402' : 'currentColor'}
 					/>
 				</button>
 				<span className="text-sm text-gray-600">

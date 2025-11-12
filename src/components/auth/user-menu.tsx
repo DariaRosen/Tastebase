@@ -107,13 +107,12 @@ export const UserMenu = () => {
 	return (
 		<div className="relative" data-user-menu-root onBlur={handleBlur}>
 			<button
-				className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-orange-600 text-white"
-				onClick={() => setIsOpen((v) => !v)}
-				aria-haspopup="menu"
-				aria-expanded={isOpen}
-				aria-label="User menu"
+				ref={triggerRef}
+				onClick={() => setIsOpen((prev) => !prev)}
+				className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-brand-secondary text-white"
+				aria-label="Open user menu"
 			>
-				{initial}
+				{initials}
 			</button>
 			{isOpen && (
 				<div

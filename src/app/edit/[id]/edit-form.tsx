@@ -117,11 +117,13 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 				<label className="flex flex-col text-sm text-gray-700">
 					<span className="font-medium">Title</span>
 					<input
+						id="title"
 						name="title"
-						defaultValue={initial.title}
+						value={state.title}
+						onChange={(event) => state.title = event.target.value}
 						required
 						minLength={3}
-						className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 						aria-describedby={state.errors?.title ? 'title-error' : undefined}
 					/>
 					{state.errors?.title && <span id="title-error" className="mt-1 text-xs text-red-600">{state.errors.title}</span>}
@@ -136,11 +138,13 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 			<label className="flex flex-col text-sm text-gray-700">
 				<span className="font-medium">Description</span>
 				<textarea
+					id="description"
 					name="description"
-					defaultValue={initial.description}
+					value={state.description}
+					onChange={(event) => state.description = event.target.value}
 					required
-					rows={3}
-					className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+					rows={4}
+					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 					aria-describedby={state.errors?.description ? 'description-error' : undefined}
 				/>
 				{state.errors?.description && (
@@ -159,7 +163,7 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 						required
 						min={1}
 						defaultValue={initial.servings ?? ''}
-						className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 						aria-describedby={state.errors?.servings ? 'servings-error' : undefined}
 					/>
 					{state.errors?.servings && (
@@ -176,7 +180,7 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 						required
 						min={0}
 						defaultValue={initial.prepMinutes ?? ''}
-						className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 						aria-describedby={state.errors?.prepMinutes ? 'prepMinutes-error' : undefined}
 					/>
 					{state.errors?.prepMinutes && (
@@ -193,7 +197,7 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 						required
 						min={0}
 						defaultValue={initial.cookMinutes ?? ''}
-						className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 						aria-describedby={state.errors?.cookMinutes ? 'cookMinutes-error' : undefined}
 					/>
 					{state.errors?.cookMinutes && (
@@ -209,7 +213,7 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 				<input
 					name="tags"
 					defaultValue={initial.tags.join(', ')}
-					className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 				/>
 				<span className="mt-1 text-xs text-gray-500">Separate tags with commas.</span>
 			</label>
@@ -226,12 +230,13 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 								onKeyDown={(event) => handleIngredientKeyDown(index, event)}
 								data-ingredient-index={index}
 								placeholder="e.g., 2 cups chopped kale"
-								className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+								className="flex-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 							/>
 							<button
 								type="button"
 								onClick={() => removeIngredient(index)}
-								className="text-sm font-medium text-red-600 hover:underline"
+								className="text-sm font-medium text-brand-primary hover:underline"
+								aria-label="Remove ingredient"
 							>
 								Remove
 							</button>
@@ -243,7 +248,7 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 					<button
 						type="button"
 						onClick={() => addIngredient()}
-						className="text-sm font-medium text-orange-600 hover:underline"
+						className="text-sm font-medium text-brand-primary hover:underline"
 					>
 						+ Add Ingredient
 					</button>
@@ -263,12 +268,13 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 								onKeyDown={(event) => handleStepKeyDown(index, event)}
 								data-step-index={index}
 								placeholder="Describe this step..."
-								className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+								className="flex-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 							/>
 							<button
 								type="button"
 								onClick={() => removeStep(index)}
-								className="text-sm font-medium text-red-600 hover:underline"
+								className="text-sm font-medium text-brand-primary hover:underline"
+								aria-label="Remove step"
 							>
 								Remove
 							</button>
@@ -278,7 +284,7 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 					<button
 						type="button"
 						onClick={() => addStep()}
-						className="text-sm font-medium text-orange-600 hover:underline"
+						className="text-sm font-medium text-brand-primary hover:underline"
 					>
 						+ Add Step
 					</button>
@@ -288,7 +294,7 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 			<button
 				type="submit"
 				disabled={isPending}
-				className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-60"
+				className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:opacity-60"
 			>
 				{isPending ? 'Saving…' : 'Save changes'}
 			</button>

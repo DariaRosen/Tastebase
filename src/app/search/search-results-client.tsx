@@ -242,19 +242,19 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3 md:flex-row md:items-center">
           <div className="relative flex-1">
-            <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+            <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-secondary/60" />
             <input
               type="search"
               value={queryInput}
               onChange={(event) => setQueryInput(event.target.value)}
               placeholder="Type a recipe name, ingredient, or chef…"
               aria-label="Search for recipes"
-              className="w-full rounded-full border border-gray-300 bg-white py-3 pl-12 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+              className="w-full rounded-full border border-border-subtle bg-white py-3 pl-12 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
             />
           </div>
           <button
             type="submit"
-            className="inline-flex items-center justify-center rounded-full bg-orange-600 px-6 py-3 text-sm font-medium text-white transition hover:bg-orange-700"
+            className="inline-flex items-center justify-center rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
           >
             Search
           </button>
@@ -268,7 +268,7 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
       </div>
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+        <div className="rounded-xl border border-brand-accent/30 bg-brand-cream-soft p-4 text-sm text-brand-accent">
           {error}
         </div>
       )}
@@ -276,7 +276,7 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
       {isLoading ? (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {skeletonArray.map((_, index) => (
-            <div key={index} className="h-72 animate-pulse rounded-xl bg-gray-200" />
+            <div key={index} className="h-72 animate-pulse rounded-xl bg-brand-cream/60" />
           ))}
         </div>
       ) : recipes.length > 0 ? (
@@ -287,7 +287,7 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
             </h2>
             <Link
               href="/"
-              className="inline-flex items-center justify-center rounded-full bg-orange-600 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-orange-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600"
+              className="inline-flex items-center justify-center rounded-full bg-brand-secondary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
             >
               Back to recipes
             </Link>
@@ -304,14 +304,14 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
           </div>
         </div>
       ) : currentQuery ? (
-        <div className="rounded-3xl border border-gray-200 bg-white p-10 text-center">
+        <div className="rounded-3xl border border-border-subtle bg-white p-10 text-center">
           <h2 className="text-xl font-semibold text-gray-800">No recipes found</h2>
           <p className="mt-2 text-sm text-gray-600">
             Try a different keyword or check out the latest creations on the home page.
           </p>
           <Link
             href="/"
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
           >
             Browse recipes
           </Link>
