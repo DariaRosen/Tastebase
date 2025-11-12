@@ -16,6 +16,7 @@ type SupabaseRecipeRow = {
   prep_minutes: number | null;
   cook_minutes: number | null;
   tags: string[] | null;
+  difficulty: string | null;
   profiles: {
     full_name: string | null;
     username: string | null;
@@ -36,6 +37,7 @@ type RecipeCardData = {
   servings?: number;
   wishlistCount: number;
   tags?: string[];
+  difficulty?: string;
 };
 
 interface SearchResultsClientProps {
@@ -104,6 +106,7 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
             prep_minutes,
             cook_minutes,
             tags,
+            difficulty,
             profiles:profiles!recipes_author_id_fkey (
               full_name,
               username,
@@ -114,7 +117,7 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
         )
         .eq('is_published', true)
         .or(
-          `title.ilike.%${currentQuery.trim()}%,description.ilike.%${currentQuery.trim()}%`
+          `title.ilike.%${currentQuery.trim()}%,description.ilike.%${currentQuery.trim()}%,difficulty.ilike.%${currentQuery.trim()}%`
         )
         .order('published_at', { ascending: false })
         .limit(50);
@@ -145,6 +148,7 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
           servings: recipe.servings ?? undefined,
           wishlistCount: recipe.recipe_saves?.[0]?.count ?? 0,
           tags: recipe.tags ?? undefined,
+          difficulty: recipe.difficulty ?? undefined,
         } satisfies RecipeCardData;
       });
 

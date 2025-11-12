@@ -17,6 +17,8 @@ const parseNumber = (value: FormDataEntryValue | null) => {
 	return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 };
 
+const allowedDifficulties = ['Easy', 'Intermediate', 'Advanced'] as const;
+
 export async function createRecipeAction(
 	_prevState: CreateRecipeState,
 	formData: FormData
@@ -28,6 +30,7 @@ export async function createRecipeAction(
 	const cookMinutes = parseNumber(formData.get('cookMinutes'));
 	const tagsInput = formData.get('tags')?.toString() ?? '';
 	const heroImageFile = formData.get('heroImage');
+	const difficultyRaw = formData.get('difficulty')?.toString().trim() ?? '';
 	const ingredientValues = formData
 		.getAll('ingredients[]')
 		.map((value) => value.toString().trim())
@@ -49,6 +52,9 @@ export async function createRecipeAction(
 	}
 	if (stepValues.length === 0) {
 		errors.steps = 'Add at least one step.';
+	}
+	if (!allowedDifficulties.includes(difficultyRaw as typeof allowedDifficulties[number])) {
+		errors.difficulty = 'Select a difficulty level.';
 	}
 
 	if (Object.keys(errors).length > 0) {
@@ -108,6 +114,7 @@ export async function createRecipeAction(
 				hero_image_url: heroImageUrl,
 				is_published: true,
 				published_at: new Date().toISOString(),
+				difficulty: difficultyRaw,
 			})
 			.select()
 			.single();

@@ -17,6 +17,8 @@ const parseNumber = (value: FormDataEntryValue | null) => {
 	return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 };
 
+const allowedDifficulties = ['Easy', 'Intermediate', 'Advanced'] as const;
+
 export async function updateRecipeAction(
 	recipeId: number,
 	previousHeroImageUrl: string | null,
@@ -30,6 +32,7 @@ export async function updateRecipeAction(
 	const cookMinutes = parseNumber(formData.get('cookMinutes'));
 	const tagsInput = formData.get('tags')?.toString() ?? '';
 	const heroImageFile = formData.get('heroImage');
+	const difficultyRaw = formData.get('difficulty')?.toString().trim() ?? '';
 	const ingredientValues = formData
 		.getAll('ingredients[]')
 		.map((value) => value.toString().trim())
@@ -47,6 +50,9 @@ export async function updateRecipeAction(
 	if (!cookMinutes && cookMinutes !== 0) errors.cookMinutes = 'Cook minutes must be zero or more.';
 	if (ingredientValues.length === 0) errors.ingredients = 'Add at least one ingredient.';
 	if (stepValues.length === 0) errors.steps = 'Add at least one step.';
+	if (!allowedDifficulties.includes(difficultyRaw as typeof allowedDifficulties[number])) {
+		errors.difficulty = 'Select a difficulty level.';
+	}
 
 	if (Object.keys(errors).length > 0) {
 		return { errors, message: 'Please fix the highlighted fields.' };
@@ -112,6 +118,7 @@ export async function updateRecipeAction(
 				cook_minutes: cookMinutes,
 				tags: tagArray,
 				hero_image_url: heroImageUrl,
+				difficulty: difficultyRaw,
 			})
 			.eq('id', recipeId);
 

@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { createRecipeAction, type CreateRecipeState } from './actions';
 
 const initialState: CreateRecipeState = {};
+const difficultyOptions = ['Easy', 'Intermediate', 'Advanced'] as const;
 
 export const CreateRecipeForm = () => {
 	const [state, formAction, isPending] = useActionState(createRecipeAction, initialState);
 	const router = useRouter();
 	const [ingredients, setIngredients] = useState<string[]>(['']);
 	const [steps, setSteps] = useState<string[]>(['']);
+	const [difficulty, setDifficulty] = useState<string>('Easy');
 
 	const handleIngredientChange = (index: number, value: string) => {
 		setIngredients((prev) => {
@@ -95,7 +97,8 @@ export const CreateRecipeForm = () => {
 	}, [state.redirectTo, router]);
 
 	return (
-		<form action={formAction} className="space-y-6">
+		<form action={formAction} className="space-y-8">
+			<input type="hidden" name="heroImageUrl" value={state.heroImageUrl ?? ''} />
 			<div className="grid gap-6 md:grid-cols-2">
 				<label className="flex flex-col text-sm text-gray-700">
 					<span className="font-medium">Title</span>
@@ -192,15 +195,48 @@ export const CreateRecipeForm = () => {
 				</label>
 			</div>
 
-			<label className="flex flex-col text-sm text-gray-700">
-				<span className="font-medium">Tags</span>
-				<input
-					name="tags"
-					placeholder="vegan, spicy, one-pan"
-					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
-				/>
-				<span className="mt-1 text-xs text-gray-500">Separate tags with commas.</span>
-			</label>
+			<div className="grid gap-6 md:grid-cols-2">
+				<div className="space-y-2">
+					<span className="text-sm font-medium text-gray-700">Difficulty</span>
+					<div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+						{difficultyOptions.map((option) => {
+							const inputId = `difficulty-${option.toLowerCase()}`;
+							return (
+								<label
+									key={option}
+									htmlFor={inputId}
+									className={`flex cursor-pointer items-center justify-center rounded-lg border px-3 py-2 text-sm font-medium shadow-sm transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-brand-secondary ${
+										difficulty === option
+											? 'border-brand-primary bg-brand-cream-soft text-brand-secondary'
+											: 'border-border-subtle text-gray-600 hover:bg-brand-cream'
+									}`}
+								>
+									<input
+										id={inputId}
+										type="radio"
+										name="difficulty"
+										value={option}
+										checked={difficulty === option}
+										onChange={(event) => setDifficulty(event.target.value)}
+										className="sr-only"
+									/>
+									{option}
+								</label>
+							);
+						})}
+					</div>
+					{state.errors?.difficulty && <p className="text-sm text-brand-accent">{state.errors.difficulty}</p>}
+				</div>
+				<label className="flex flex-col text-sm text-gray-700">
+					<span className="font-medium">Tags</span>
+					<input
+						name="tags"
+						placeholder="vegan, spicy, one-pan"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
+					/>
+					<span className="mt-1 text-xs text-gray-500">Separate tags with commas.</span>
+				</label>
+			</div>
 
 			<div className="flex flex-col text-sm text-gray-700">
 				<span className="font-medium">Ingredients</span>

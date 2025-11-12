@@ -15,21 +15,28 @@ type OwnedRecipeRow = {
   prep_minutes: number | null;
   cook_minutes: number | null;
   tags: string[] | null;
+  difficulty: string | null;
   recipe_saves: { count: number | null }[] | null;
+  profiles: {
+    full_name: string | null;
+    username: string | null;
+    avatar_url: string | null;
+  } | null;
 };
 
 type RecipeCardData = {
   id: string;
   title: string;
   description?: string;
+  authorName: string;
+  authorAvatar?: string;
   imageUrl?: string;
   prepTime?: number;
   cookTime?: number;
   servings?: number;
   wishlistCount?: number;
   tags?: string[];
-  authorName: string;
-  authorAvatar?: string;
+  difficulty?: string;
 };
 
 export default function MyRecipesClient() {
@@ -78,6 +85,12 @@ export default function MyRecipesClient() {
           prep_minutes,
           cook_minutes,
           tags,
+          difficulty,
+          profiles:profiles!recipes_author_id_fkey (
+            full_name,
+            username,
+            avatar_url
+          ),
           recipe_saves ( count )
         `
         )
@@ -93,19 +106,24 @@ export default function MyRecipesClient() {
         return;
       }
 
-      const mapped: RecipeCardData[] = (data ?? []).map((recipe: OwnedRecipeRow) => ({
-        id: recipe.id.toString(),
-        title: recipe.title,
-        description: recipe.description ?? undefined,
-        imageUrl: recipe.hero_image_url ?? undefined,
-        prepTime: recipe.prep_minutes ?? undefined,
-        cookTime: recipe.cook_minutes ?? undefined,
-        servings: recipe.servings ?? undefined,
-        wishlistCount: recipe.recipe_saves?.[0]?.count ?? undefined,
-        tags: recipe.tags ?? undefined,
-        authorName: 'You',
-        authorAvatar: undefined,
-      }));
+      const mapped: RecipeCardData[] = (data ?? []).map((recipe: OwnedRecipeRow) => {
+        const profile = recipe.profiles;
+        const author = profile?.full_name || profile?.username || 'You';
+        return {
+          id: recipe.id.toString(),
+          title: recipe.title,
+          description: recipe.description ?? undefined,
+          imageUrl: recipe.hero_image_url ?? undefined,
+          authorName: author,
+          authorAvatar: profile?.avatar_url ?? undefined,
+          prepTime: recipe.prep_minutes ?? undefined,
+          cookTime: recipe.cook_minutes ?? undefined,
+          servings: recipe.servings ?? undefined,
+          wishlistCount: recipe.recipe_saves?.[0]?.count ?? undefined,
+          tags: recipe.tags ?? undefined,
+          difficulty: recipe.difficulty ?? undefined,
+        };
+      });
 
       setRecipes(mapped);
       setIsLoading(false);

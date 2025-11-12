@@ -15,6 +15,7 @@ interface RecipeCardProps {
 	servings?: number;
 	wishlistCount?: number;
 	tags?: string[];
+	difficulty?: string;
 	isSaved?: boolean;
 	onToggleSave?: (id: string) => void;
 }
@@ -31,6 +32,7 @@ export const RecipeCard = ({
 	servings,
 	wishlistCount,
 	tags,
+	difficulty,
 	isSaved,
 	onToggleSave,
 }: RecipeCardProps) => {
@@ -80,9 +82,16 @@ export const RecipeCard = ({
 			</div>
 
 			<div className="mt-3 space-y-2">
-				<h3 className="line-clamp-2 text-lg font-semibold text-brand-secondary transition-colors group-hover:text-brand-primary">
-					{title}
-				</h3>
+				<div className="flex items-start justify-between">
+					<h3 className="line-clamp-2 text-lg font-semibold text-brand-secondary transition-colors group-hover:text-brand-primary">
+						{title}
+					</h3>
+					{difficulty && (
+						<span className="ml-2 rounded-full bg-brand-gold/20 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-brand-secondary">
+							{difficulty}
+						</span>
+					)}
+				</div>
 
 				{description && <p className="line-clamp-2 text-sm text-gray-600">{description}</p>}
 
