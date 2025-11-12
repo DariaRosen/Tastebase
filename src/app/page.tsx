@@ -22,6 +22,7 @@ type RecipeCardData = {
 	wishlistCount?: number;
 	tags?: string[];
 	publishedAt?: string | null;
+	difficulty?: string;
 };
 
 type SupabaseRecipeRow = {
@@ -34,6 +35,7 @@ type SupabaseRecipeRow = {
 	cook_minutes: number | null;
 	tags: string[] | null;
 	published_at: string | null;
+	difficulty: string | null;
 	profiles:
 		| {
 				full_name: string | null;
@@ -93,6 +95,7 @@ export default function Home() {
             cook_minutes,
             tags,
             published_at,
+            difficulty,
             profiles:profiles!recipes_author_id_fkey (
               full_name,
               username,
@@ -140,6 +143,7 @@ export default function Home() {
 						wishlistCount: saveCount ?? undefined,
 						tags: recipe.tags ?? undefined,
 						publishedAt: recipe.published_at ?? undefined,
+						difficulty: recipe.difficulty ?? undefined,
 					};
 				});
 

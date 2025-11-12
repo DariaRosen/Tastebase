@@ -15,6 +15,7 @@ type RecipeRow = {
 	prep_minutes: number | null;
 	cook_minutes: number | null;
 	tags: string[] | null;
+	difficulty: string | null;
 	profiles:
 		| {
 				full_name: string | null;
@@ -68,6 +69,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
         prep_minutes,
         cook_minutes,
         tags,
+        difficulty,
         profiles:profiles!recipes_author_id_fkey (
           full_name,
           username,
@@ -141,6 +143,7 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
 							tags: recipe.tags ?? [],
 							ingredients,
 							steps,
+							difficulty: recipe.difficulty ?? 'Easy',
 						}}
 					/>
 					{recipe.hero_image_url && (

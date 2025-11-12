@@ -16,6 +16,7 @@ type RecipeDetailRow = {
 	prep_minutes: number | null;
 	cook_minutes: number | null;
 	tags: string[] | null;
+	difficulty: string | null;
 	published_at: string | null;
 	profiles:
 		| {
@@ -64,6 +65,7 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
         prep_minutes,
         cook_minutes,
         tags,
+        difficulty,
         published_at,
         profiles:profiles!recipes_author_id_fkey (
           full_name,
@@ -221,6 +223,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 										<div>
 											<span className="font-medium text-brand-secondary">Servings:</span>{' '}
 											{recipe.servings}
+										</div>
+									)}
+									{recipe.difficulty && (
+										<div>
+											<span className="font-medium text-brand-secondary">Difficulty:</span>{' '}
+											{recipe.difficulty}
 										</div>
 									)}
 									<div>
