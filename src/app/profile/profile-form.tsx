@@ -137,22 +137,26 @@ export const ProfileForm = ({
 				<label className="flex flex-col text-sm text-gray-700">
 					<span className="font-medium">Username</span>
 					<input
+						id="username"
+						name="username"
 						value={username}
 						onChange={(event) => setUsername(event.target.value)}
-						placeholder="chefjane"
+						placeholder="chef-amy"
 						required
 						minLength={3}
 						maxLength={32}
-						className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 					/>
 				</label>
 				<label className="flex flex-col text-sm text-gray-700">
 					<span className="font-medium">Full name</span>
 					<input
+						id="fullName"
+						name="fullName"
 						value={fullName}
 						onChange={(event) => setFullName(event.target.value)}
-						placeholder="Jane Doe"
-						className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+						placeholder="Amy Santiago"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 					/>
 				</label>
 			</div>
@@ -160,21 +164,23 @@ export const ProfileForm = ({
 			<label className="flex flex-col text-sm text-gray-700">
 				<span className="font-medium">Bio</span>
 				<textarea
+					id="bio"
+					name="bio"
 					value={bio}
 					onChange={(event) => setBio(event.target.value)}
-					placeholder="Tell others about your cooking style, favorite cuisines, or signature dishes."
-					rows={4}
-					className="mt-1 rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+					placeholder="Short intro about you..."
+					rows={3}
+					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
 				/>
 			</label>
 
 			<button
 				type="submit"
 				disabled={isSaving}
-				className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-60"
+				className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:opacity-60"
 				aria-busy={isSaving}
 			>
-				{isSaving ? 'Saving…' : 'Save changes'}
+				{isSaving ? 'Saving…' : 'Save profile'}
 			</button>
 
 			{status.type === 'success' && <p className="text-sm text-green-600">{status.message}</p>}

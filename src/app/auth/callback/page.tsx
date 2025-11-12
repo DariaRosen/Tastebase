@@ -61,7 +61,7 @@ export default function AuthCallbackPage() {
 				<p className="text-sm text-gray-600">{message}</p>
 				{status === 'error' && (
 					<div className="mt-4">
-						<Link href="/" className="text-sm font-medium text-orange-600 hover:underline">
+						<Link href="/" className="text-sm font-medium text-brand-primary hover:underline">
 							Go back home
 						</Link>
 					</div>

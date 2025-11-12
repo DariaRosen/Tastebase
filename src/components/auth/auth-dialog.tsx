@@ -269,7 +269,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
           <button
             type="button"
             onClick={() => setMode((m) => (m === 'login' ? 'signup' : 'login'))}
-            className="text-sm font-medium text-orange-600 hover:underline"
+            className="text-sm font-medium text-brand-primary hover:underline"
             aria-label="Toggle auth mode"
           >
             {mode === 'login' ? 'Create account' : 'Have an account? Log in'}
@@ -286,7 +286,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                 maxLength={64}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                className="w-full rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
                 placeholder="Jane Doe"
                 aria-label="Name"
               />
@@ -300,7 +300,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoFocus
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+              className="w-full rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
               placeholder="you@example.com"
               aria-label="Email address"
             />
@@ -312,7 +312,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-orange-500 focus:outline-none focus:ring-2 focus:ring-orange-200"
+                className="w-full rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
                 placeholder="Jane Doe"
                 aria-label="Name"
               />
@@ -321,7 +321,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
           <button
             type="submit"
             disabled={isLoading}
-            className="inline-flex w-full items-center justify-center rounded-lg bg-orange-600 px-4 py-2 font-medium text-white transition-colors hover:bg-orange-700 disabled:opacity-60"
+            className="inline-flex w-full items-center justify-center rounded-lg bg-brand-primary px-4 py-2 font-semibold text-white transition-colors hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:opacity-60"
             aria-busy={isLoading}
             aria-disabled={isLoading}
           >

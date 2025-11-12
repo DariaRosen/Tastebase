@@ -124,29 +124,29 @@ export default function MyRecipesClient() {
       <main className="container mx-auto px-4 py-8">
         <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="mb-2 text-3xl font-bold text-gray-900">My recipes</h1>
+            <h1 className="mb-2 text-3xl font-bold text-brand-secondary">My recipes</h1>
             <p className="text-gray-600">All the recipes you have published.</p>
           </div>
           <Link
             href="/create"
-            className="inline-flex items-center justify-center rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white hover:bg-orange-700"
+            className="inline-flex items-center justify-center rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
           >
             + Add new recipe
           </Link>
         </div>
 
         {!userId ? (
-          <div className="rounded-xl border border-orange-200 bg-orange-50 p-6 text-center text-orange-700">
+          <div className="rounded-xl border border-border-subtle bg-brand-cream-soft p-6 text-center text-brand-secondary">
             Sign in to manage your recipes.
           </div>
         ) : isLoading ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 3 }).map((_, index) => (
-              <div key={index} className="h-72 animate-pulse rounded-xl bg-gray-200" />
+              <div key={index} className="h-72 animate-pulse rounded-xl bg-brand-cream/60" />
             ))}
           </div>
         ) : error ? (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-red-600">
+          <div className="rounded-xl border border-brand-accent/30 bg-brand-cream-soft p-6 text-center text-brand-accent">
             {error}
           </div>
         ) : recipes.length > 0 ? (
@@ -156,7 +156,7 @@ export default function MyRecipesClient() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white p-12 text-center">
+          <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border-subtle bg-white p-12 text-center">
             <p className="text-lg font-medium text-gray-700">You have not published any recipes yet</p>
             <p className="text-sm text-gray-500">Create your first recipe to see it here.</p>
           </div>
