@@ -288,42 +288,32 @@ export default function Home() {
 						<p className="text-gray-600">Explore delicious recipes from our community of home cooks</p>
 					</div>
 					<div className="flex flex-wrap items-center gap-2">
-						<div className="flex flex-col text-xs uppercase tracking-wide text-gray-500">
-							<label htmlFor="category-filter" className="mb-1 text-[0.65rem] font-semibold text-brand-secondary">
-								Category
-							</label>
-							<select
-								id="category-filter"
-								value={selectedCategory ?? 'ALL'}
-								onChange={handleSelectCategory}
-								className="h-10 rounded-full border border-border-subtle bg-white px-4 text-sm text-brand-secondary/80 shadow-sm focus:border-brand-secondary focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
-							>
-								<option value="ALL">All categories</option>
-								{availableCategories.map((category) => (
-									<option key={category} value={category}>
-										{category}
-									</option>
-								))}
-							</select>
-						</div>
-						<div className="flex flex-col text-xs uppercase tracking-wide text-gray-500">
-							<label htmlFor="difficulty-filter" className="mb-1 text-[0.65rem] font-semibold text-brand-secondary">
-								Difficulty
-							</label>
-							<select
-								id="difficulty-filter"
-								value={selectedDifficulty ?? 'ALL'}
-								onChange={handleSelectDifficulty}
-								className="h-10 rounded-full border border-border-subtle bg-white px-4 text-sm text-brand-secondary/80 shadow-sm focus:border-brand-secondary focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
-							>
-								<option value="ALL">All difficulties</option>
-								{availableDifficulties.map((difficulty) => (
-									<option key={difficulty} value={difficulty}>
-										{difficulty}
-									</option>
-								))}
-							</select>
-						</div>
+						<select
+							id="category-filter"
+							value={selectedCategory ?? 'ALL'}
+							onChange={handleSelectCategory}
+							className="h-10 rounded-full border border-border-subtle bg-white px-4 text-sm text-brand-secondary/80 shadow-sm focus:border-brand-secondary focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
+						>
+							<option value="ALL">All categories</option>
+							{availableCategories.map((category) => (
+								<option key={category} value={category}>
+									{category}
+								</option>
+							))}
+						</select>
+						<select
+							id="difficulty-filter"
+							value={selectedDifficulty ?? 'ALL'}
+							onChange={handleSelectDifficulty}
+							className="h-10 rounded-full border border-border-subtle bg-white px-4 text-sm text-brand-secondary/80 shadow-sm focus:border-brand-secondary focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
+						>
+							<option value="ALL">All difficulties</option>
+							{availableDifficulties.map((difficulty) => (
+								<option key={difficulty} value={difficulty}>
+									{difficulty}
+								</option>
+							))}
+						</select>
 						{hasActiveFilters && (
 							<button
 								type="button"
