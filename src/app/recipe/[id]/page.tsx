@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { Header } from '@/components/header';
 import { SaveRecipeToggle } from '@/components/save-recipe-toggle';
+import { DeleteRecipeButton } from './delete-button';
 
 type RecipeDetailRow = {
 	id: number;
@@ -87,10 +88,12 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 		.eq('is_published', true)
 		.order('position', { foreignTable: 'recipe_ingredients', ascending: true })
 		.order('position', { foreignTable: 'recipe_steps', ascending: true })
-		.single<RecipeDetailRow>();
+		.maybeSingle<RecipeDetailRow>();
 
 	if (error) {
-		console.error('[RecipeDetail] fetch error', { recipeId, error });
+		if (error.message) {
+			console.error('[RecipeDetail] fetch error', { recipeId, message: error.message });
+		}
 		notFound();
 	}
 
@@ -131,12 +134,15 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 			<main className="container mx-auto px-4 py-10">
 				<div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
 					{isOwner && (
-						<Link
-							href={`/edit/${recipe.id}`}
-							className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-						>
-							Edit recipe
-						</Link>
+						<div className="flex items-center gap-3">
+							<Link
+								href={`/edit/${recipe.id}`}
+								className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+							>
+								Edit recipe
+							</Link>
+							<DeleteRecipeButton recipeId={recipe.id} />
+						</div>
 					)}
 					<Link
 						href="/"
