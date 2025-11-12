@@ -36,11 +36,11 @@ export function DeleteRecipeButton({ recipeId }: DeleteRecipeButtonProps) {
         type="button"
         onClick={handleDelete}
         disabled={isPending}
-        className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-60"
+        className="inline-flex items-center justify-center rounded-lg border border-brand-accent/40 px-3 py-2 text-sm font-medium text-brand-accent hover:bg-brand-cream-soft disabled:opacity-60"
       >
         {isPending ? 'Deleting…' : 'Delete recipe'}
       </button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-brand-accent">{error}</p>}
     </div>
   );
 }
