@@ -17,6 +17,8 @@ type SupabaseRecipeRow = {
   cook_minutes: number | null;
   tags: string[] | null;
   difficulty: string | null;
+  published_at: string | null;
+  recipe_ingredients?: { name: string }[] | null;
   profiles: {
     full_name: string | null;
     username: string | null;
@@ -43,6 +45,9 @@ type RecipeCardData = {
 interface SearchResultsClientProps {
   initialQuery: string;
 }
+
+const escapeForILike = (value: string) =>
+  value.replace(/[%_\\]/g, (character) => `\\${character}`);
 
 const skeletonArray = Array.from({ length: 6 });
 
@@ -94,10 +99,13 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('recipes')
-        .select(
-          `
+      const trimmedQuery = currentQuery.trim();
+      const escapedQuery = escapeForILike(trimmedQuery);
+      const likePattern = `%${escapedQuery}%`;
+      const baseOrFilters = ['title', 'description', 'difficulty']
+        .map((column) => `${column}.ilike.${likePattern}`)
+        .join(',');
+      const selectColumns = `
             id,
             title,
             description,
@@ -107,33 +115,100 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
             cook_minutes,
             tags,
             difficulty,
+            published_at,
             profiles:profiles!recipes_author_id_fkey (
               full_name,
               username,
               avatar_url
             ),
             recipe_saves:recipe_saves ( count )
-          `
-        )
-        .eq('is_published', true)
-        .or(
-          `title.ilike.%${currentQuery.trim()}%,description.ilike.%${currentQuery.trim()}%,difficulty.ilike.%${currentQuery.trim()}%`
-        )
-        .order('published_at', { ascending: false })
-        .limit(50);
+          `;
+
+      const [
+        { data: baseData, error: baseError },
+        { data: ingredientRows, error: ingredientError },
+      ] = await Promise.all([
+        supabase
+          .from('recipes')
+          .select(selectColumns)
+          .eq('is_published', true)
+          .or(baseOrFilters)
+          .order('published_at', { ascending: false })
+          .limit(50),
+        supabase
+          .from('recipe_ingredients')
+          .select('recipe_id')
+          .ilike('name', likePattern)
+          .limit(200),
+      ]);
 
       if (!mounted) {
         return;
       }
 
-      if (fetchError) {
-        setError(fetchError.message ?? 'Failed to load results.');
+      if (baseError) {
+        setError(baseError.message ?? 'Failed to load results.');
         setRecipes([]);
         setIsLoading(false);
         return;
       }
 
-      const mapped: RecipeCardData[] = (data ?? []).map((recipe: SupabaseRecipeRow) => {
+      if (ingredientError) {
+        setError(ingredientError.message ?? 'Failed to load results.');
+        setRecipes([]);
+        setIsLoading(false);
+        return;
+      }
+
+      const baseRecipes = baseData ?? [];
+      const baseRecipeIds = new Set(baseRecipes.map((recipe) => recipe.id));
+
+      const ingredientRecipeIds = new Set(
+        (ingredientRows ?? [])
+          .map((row) => row.recipe_id)
+          .filter((value): value is number => typeof value === 'number')
+      );
+
+      const missingIngredientIds = Array.from(ingredientRecipeIds).filter(
+        (recipeId) => !baseRecipeIds.has(recipeId)
+      );
+
+      let ingredientRecipes: SupabaseRecipeRow[] = [];
+
+      if (missingIngredientIds.length > 0) {
+        const { data: ingredientData, error: ingredientDataError } = await supabase
+          .from('recipes')
+          .select(selectColumns)
+          .eq('is_published', true)
+          .in('id', missingIngredientIds)
+          .order('published_at', { ascending: false });
+
+        if (!mounted) {
+          return;
+        }
+
+        if (ingredientDataError) {
+          setError(ingredientDataError.message ?? 'Failed to load results.');
+          setRecipes([]);
+          setIsLoading(false);
+          return;
+        }
+
+        ingredientRecipes = ingredientData ?? [];
+      }
+
+      const combinedRecipes = [...baseRecipes, ...ingredientRecipes].sort((first, second) => {
+        const firstPublished = first.published_at ?? '';
+        const secondPublished = second.published_at ?? '';
+        if (firstPublished === secondPublished) {
+          return second.id - first.id;
+        }
+        return secondPublished.localeCompare(firstPublished);
+      });
+
+      const limitedRecipes = combinedRecipes.slice(0, 50);
+
+      const mapped: RecipeCardData[] = limitedRecipes.map((recipe: SupabaseRecipeRow) => {
         const profile = recipe.profiles;
         const author = profile?.full_name || profile?.username || 'Unknown cook';
         return {
