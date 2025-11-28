@@ -107,7 +107,7 @@ export const Header = () => {
             value={searchValue}
             onChange={(event) => setSearchValue(event.target.value)}
             placeholder="Find a recipe or ingredient"
-            className="h-12 w-full rounded-l-full border border-border-subtle bg-white px-5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/50"
+            className="h-12 w-full rounded-l-full border border-border-subtle bg-white px-5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
             aria-label="Search for recipes"
           />
           <button
@@ -126,7 +126,7 @@ export const Header = () => {
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
               placeholder="Search"
-              className="h-10 w-40 rounded-xl border border-border-subtle bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none"
+              className="h-10 w-40 rounded-xl border border-border-subtle bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               aria-label="Search for recipes"
             />
             <button
