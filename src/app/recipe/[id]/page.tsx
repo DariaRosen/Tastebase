@@ -5,6 +5,8 @@ import { createServerSupabase } from '@/lib/supabaseServer';
 import { Header } from '@/components/header';
 import { SaveRecipeToggle } from '@/components/save-recipe-toggle';
 import { DeleteRecipeButton } from './delete-button';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { fetchRecipeById, checkRecipeSaved } from '@/lib/data-service';
 
 type RecipeDetailRow = {
 	id: number;
@@ -50,47 +52,9 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 		notFound();
 	}
 
-	const supabase = await createServerSupabase();
+	const supabase = USE_SUPABASE ? await createServerSupabase() : null;
 
-	const { data: recipe, error } = await supabase
-		.from('recipes')
-		.select(
-			`
-        id,
-        author_id,
-        title,
-        description,
-        hero_image_url,
-        servings,
-        prep_minutes,
-        cook_minutes,
-        tags,
-        difficulty,
-        published_at,
-        profiles:profiles!recipes_author_id_fkey (
-          full_name,
-          username,
-          avatar_url
-        ),
-        recipe_ingredients:recipe_ingredients (
-          position,
-          quantity,
-          unit,
-          name,
-          note
-        ),
-        recipe_steps:recipe_steps (
-          position,
-          instruction
-        ),
-        recipe_saves:recipe_saves ( count )
-      `,
-		)
-		.eq('id', recipeId)
-		.eq('is_published', true)
-		.order('position', { foreignTable: 'recipe_ingredients', ascending: true })
-		.order('position', { foreignTable: 'recipe_steps', ascending: true })
-		.maybeSingle<RecipeDetailRow>();
+	const { data: recipe, error } = await fetchRecipeById(supabase, recipeId);
 
 	if (error) {
 		if (error.message) {
@@ -104,20 +68,18 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 		notFound();
 	}
 
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
-
+	let user = null;
 	let isSaved = false;
-	if (user) {
-		const { data: saved } = await supabase
-			.from('recipe_saves')
-			.select('id')
-			.eq('user_id', user.id)
-			.eq('recipe_id', recipeId)
-			.limit(1)
-			.maybeSingle();
-		isSaved = Boolean(saved);
+	if (USE_SUPABASE && supabase) {
+		const {
+			data: { user: authUser },
+		} = await supabase.auth.getUser();
+		user = authUser;
+
+		if (user) {
+			const { data: saved } = await checkRecipeSaved(supabase, recipeId, user.id);
+			isSaved = saved;
+		}
 	}
 
 	const wishlistCount = recipe.recipe_saves?.[0]?.count ?? 0;

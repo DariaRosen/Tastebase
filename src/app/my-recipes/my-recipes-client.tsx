@@ -5,24 +5,9 @@ import Link from 'next/link';
 import { Header } from '@/components/header';
 import { RecipeCard } from '@/components/recipe-card';
 import { createClient } from '@/lib/supabase';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { fetchRecipesByAuthor, type RecipeRow } from '@/lib/data-service';
 
-type OwnedRecipeRow = {
-  id: number;
-  title: string;
-  description: string | null;
-  hero_image_url: string | null;
-  servings: number | null;
-  prep_minutes: number | null;
-  cook_minutes: number | null;
-  tags: string[] | null;
-  difficulty: string | null;
-  recipe_saves: { count: number | null }[] | null;
-  profiles: {
-    full_name: string | null;
-    username: string | null;
-    avatar_url: string | null;
-  } | null;
-};
 
 type RecipeCardData = {
   id: string;
@@ -40,13 +25,18 @@ type RecipeCardData = {
 };
 
 export default function MyRecipesClient() {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => (USE_SUPABASE ? createClient() : null), []);
   const [userId, setUserId] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<RecipeCardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!USE_SUPABASE || !supabase) {
+      setUserId(null);
+      return;
+    }
+
     let mounted = true;
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -73,29 +63,7 @@ export default function MyRecipesClient() {
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('recipes')
-        .select(
-          `
-          id,
-          title,
-          description,
-          hero_image_url,
-          servings,
-          prep_minutes,
-          cook_minutes,
-          tags,
-          difficulty,
-          profiles:profiles!recipes_author_id_fkey (
-            full_name,
-            username,
-            avatar_url
-          ),
-          recipe_saves ( count )
-        `
-        )
-        .eq('author_id', userId)
-        .order('created_at', { ascending: false });
+      const { data, error: fetchError } = await fetchRecipesByAuthor(supabase, userId);
 
       if (!mounted) return;
 
@@ -106,7 +74,7 @@ export default function MyRecipesClient() {
         return;
       }
 
-      const mapped: RecipeCardData[] = (data ?? []).map((recipe: OwnedRecipeRow) => {
+      const mapped: RecipeCardData[] = ((data ?? []) as RecipeRow[]).map((recipe) => {
         const profile = recipe.profiles;
         const author = profile?.full_name || profile?.username || 'You';
         return {

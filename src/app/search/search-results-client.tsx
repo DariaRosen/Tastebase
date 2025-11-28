@@ -6,26 +6,9 @@ import { useRouter } from 'next/navigation';
 import { Search as SearchIcon } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 import { RecipeCard } from '@/components/recipe-card';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { searchRecipesData, getSavedRecipeIds, type RecipeRow } from '@/lib/data-service';
 
-type SupabaseRecipeRow = {
-  id: number;
-  title: string;
-  description: string | null;
-  hero_image_url: string | null;
-  servings: number | null;
-  prep_minutes: number | null;
-  cook_minutes: number | null;
-  tags: string[] | null;
-  difficulty: string | null;
-  published_at: string | null;
-  recipe_ingredients?: { name: string }[] | null;
-  profiles: {
-    full_name: string | null;
-    username: string | null;
-    avatar_url: string | null;
-  } | null;
-  recipe_saves: { count: number | null }[] | null;
-};
 
 type RecipeCardData = {
   id: string;
@@ -46,13 +29,11 @@ interface SearchResultsClientProps {
   initialQuery: string;
 }
 
-const escapeForILike = (value: string) =>
-  value.replace(/[%_\\]/g, (character) => `\\${character}`);
 
 const skeletonArray = Array.from({ length: 6 });
 
 export default function SearchResultsClient({ initialQuery }: SearchResultsClientProps) {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => (USE_SUPABASE ? createClient() : null), []);
   const router = useRouter();
 
   const [queryInput, setQueryInput] = useState(initialQuery);
@@ -66,6 +47,12 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
   const [, startTransition] = useTransition();
 
   useEffect(() => {
+    if (!USE_SUPABASE || !supabase) {
+      setUserId(null);
+      setIsLoggedIn(false);
+      return;
+    }
+
     let mounted = true;
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -99,116 +86,20 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
       setIsLoading(true);
       setError(null);
 
-      const trimmedQuery = currentQuery.trim();
-      const escapedQuery = escapeForILike(trimmedQuery);
-      const likePattern = `%${escapedQuery}%`;
-      const baseOrFilters = ['title', 'description', 'difficulty']
-        .map((column) => `${column}.ilike.${likePattern}`)
-        .join(',');
-      const selectColumns = `
-            id,
-            title,
-            description,
-            hero_image_url,
-            servings,
-            prep_minutes,
-            cook_minutes,
-            tags,
-            difficulty,
-            published_at,
-            profiles:profiles!recipes_author_id_fkey (
-              full_name,
-              username,
-              avatar_url
-            ),
-            recipe_saves:recipe_saves ( count )
-          `;
-
-      const [
-        { data: baseData, error: baseError },
-        { data: ingredientRows, error: ingredientError },
-      ] = await Promise.all([
-        supabase
-          .from('recipes')
-          .select(selectColumns)
-          .eq('is_published', true)
-          .or(baseOrFilters)
-          .order('published_at', { ascending: false })
-          .limit(50),
-        supabase
-          .from('recipe_ingredients')
-          .select('recipe_id')
-          .ilike('name', likePattern)
-          .limit(200),
-      ]);
+      const { data, error: fetchError } = await searchRecipesData(supabase, currentQuery.trim());
 
       if (!mounted) {
         return;
       }
 
-      if (baseError) {
-        setError(baseError.message ?? 'Failed to load results.');
+      if (fetchError) {
+        setError(fetchError.message ?? 'Failed to load results.');
         setRecipes([]);
         setIsLoading(false);
         return;
       }
 
-      if (ingredientError) {
-        setError(ingredientError.message ?? 'Failed to load results.');
-        setRecipes([]);
-        setIsLoading(false);
-        return;
-      }
-
-      const baseRecipes = baseData ?? [];
-      const baseRecipeIds = new Set(baseRecipes.map((recipe) => recipe.id));
-
-      const ingredientRecipeIds = new Set(
-        (ingredientRows ?? [])
-          .map((row) => row.recipe_id)
-          .filter((value): value is number => typeof value === 'number')
-      );
-
-      const missingIngredientIds = Array.from(ingredientRecipeIds).filter(
-        (recipeId) => !baseRecipeIds.has(recipeId)
-      );
-
-      let ingredientRecipes: SupabaseRecipeRow[] = [];
-
-      if (missingIngredientIds.length > 0) {
-        const { data: ingredientData, error: ingredientDataError } = await supabase
-          .from('recipes')
-          .select(selectColumns)
-          .eq('is_published', true)
-          .in('id', missingIngredientIds)
-          .order('published_at', { ascending: false });
-
-        if (!mounted) {
-          return;
-        }
-
-        if (ingredientDataError) {
-          setError(ingredientDataError.message ?? 'Failed to load results.');
-          setRecipes([]);
-          setIsLoading(false);
-          return;
-        }
-
-        ingredientRecipes = ingredientData ?? [];
-      }
-
-      const combinedRecipes = [...baseRecipes, ...ingredientRecipes].sort((first, second) => {
-        const firstPublished = first.published_at ?? '';
-        const secondPublished = second.published_at ?? '';
-        if (firstPublished === secondPublished) {
-          return second.id - first.id;
-        }
-        return secondPublished.localeCompare(firstPublished);
-      });
-
-      const limitedRecipes = combinedRecipes.slice(0, 50);
-
-      const mapped: RecipeCardData[] = limitedRecipes.map((recipe: SupabaseRecipeRow) => {
+      const mapped: RecipeCardData[] = ((data ?? []) as RecipeRow[]).map((recipe) => {
         const profile = recipe.profiles;
         const author = profile?.full_name || profile?.username || 'Unknown cook';
         return {
@@ -229,14 +120,10 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
 
       setRecipes(mapped);
 
-      if (userId) {
-        const { data: savedData } = await supabase
-          .from('recipe_saves')
-          .select('recipe_id')
-          .eq('user_id', userId);
-
+      if (userId && USE_SUPABASE) {
+        const { data: savedIdsData } = await getSavedRecipeIds(supabase, userId);
         if (mounted) {
-          setSavedIds(new Set((savedData ?? []).map((item) => item.recipe_id.toString())));
+          setSavedIds(new Set((savedIdsData ?? []).map((id) => id.toString())));
         }
       } else {
         setSavedIds(new Set());
@@ -266,7 +153,7 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
 
   const handleToggleSave = useCallback(
     async (recipeId: string) => {
-      if (!userId) {
+      if (!USE_SUPABASE || !userId || !supabase) {
         setError('Please sign in to manage your wishlist.');
         setTimeout(() => setError(null), 2000);
         return;
