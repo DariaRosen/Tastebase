@@ -34,24 +34,41 @@ export const ProfileForm = ({
 	// Load demo user data if not using Supabase
 	useEffect(() => {
 		if (!USE_SUPABASE) {
-			const demoUser = getDemoSession();
-			if (!demoUser) {
-				router.push('/');
-				return;
-			}
-			setUsername(demoUser.username ?? '');
-			setFullName(demoUser.full_name ?? '');
-			setBio(demoUser.bio ?? '');
-			setAvatarPreview(demoUser.avatar_url);
-		}
-	}, [router]);
+			const loadDemoUser = () => {
+				const demoUser = getDemoSession();
+				if (!demoUser) {
+					router.push('/');
+					return;
+				}
+				setUsername(demoUser.username ?? '');
+				setFullName(demoUser.full_name ?? '');
+				setBio(demoUser.bio ?? '');
+				setAvatarPreview(demoUser.avatar_url);
+			};
 
-	useEffect(() => {
-		setUsername(initialUsername ?? '');
-		setFullName(initialFullName ?? '');
-		setBio(initialBio ?? '');
-		setAvatarPreview(initialAvatarUrl ?? null);
-	}, [initialUsername, initialFullName, initialBio, initialAvatarUrl]);
+			loadDemoUser();
+
+			// Listen for storage changes (e.g., profile updated in another tab)
+			const handleStorageChange = () => {
+				loadDemoUser();
+			};
+			window.addEventListener('storage', handleStorageChange);
+			
+			// Also check periodically for same-tab updates
+			const interval = setInterval(loadDemoUser, 500);
+
+			return () => {
+				window.removeEventListener('storage', handleStorageChange);
+				clearInterval(interval);
+			};
+		} else {
+			// Only use initial props if we're using Supabase
+			setUsername(initialUsername ?? '');
+			setFullName(initialFullName ?? '');
+			setBio(initialBio ?? '');
+			setAvatarPreview(initialAvatarUrl ?? null);
+		}
+	}, [router, initialUsername, initialFullName, initialBio, initialAvatarUrl]);
 
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
