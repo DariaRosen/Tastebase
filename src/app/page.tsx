@@ -6,6 +6,8 @@ import { Header } from '@/components/header';
 import { TabSwitcher } from '@/components/tab-switcher';
 import { RecipeCard } from '@/components/recipe-card';
 import { createClient } from '@/lib/supabase';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { fetchPublishedRecipes, getSavedRecipeIds, type RecipeRow } from '@/lib/data-service';
 
 type Tab = 'latest' | 'popular';
 
@@ -25,26 +27,6 @@ type RecipeCardData = {
 	difficulty?: string;
 };
 
-type SupabaseRecipeRow = {
-	id: number;
-	title: string;
-	description: string | null;
-	hero_image_url: string | null;
-	servings: number | null;
-	prep_minutes: number | null;
-	cook_minutes: number | null;
-	tags: string[] | null;
-	published_at: string | null;
-	difficulty: string | null;
-	profiles:
-		| {
-				full_name: string | null;
-				username: string | null;
-				avatar_url: string | null;
-		  }
-		| null;
-	recipe_saves: { count: number | null }[] | null;
-};
 
 export default function Home() {
 	const [activeTab, setActiveTab] = useState<Tab>('latest');
@@ -57,9 +39,17 @@ export default function Home() {
 	const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 	const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
 
-	const supabase = useMemo(() => createClient(), []);
+	const supabase = useMemo(() => (USE_SUPABASE ? createClient() : null), []);
 
 	useEffect(() => {
+		if (!USE_SUPABASE) {
+			setIsLoggedIn(false);
+			setUserId(null);
+			return;
+		}
+
+		if (!supabase) return;
+
 		let mounted = true;
 		(async () => {
 			const { data } = await supabase.auth.getUser();
@@ -84,36 +74,11 @@ export default function Home() {
 			setIsLoading(true);
 			setError(null);
 
-			const query = supabase
-				.from('recipes')
-				.select(
-					`
-            id,
-            title,
-            description,
-            hero_image_url,
-            servings,
-            prep_minutes,
-            cook_minutes,
-            tags,
-            published_at,
-            difficulty,
-            profiles:profiles!recipes_author_id_fkey (
-              full_name,
-              username,
-              avatar_url
-            ),
-            recipe_saves:recipe_saves ( count )
-          `
-				)
-				.eq('is_published', true)
-				.limit(30);
-
-			if (activeTab === 'latest') {
-				query.order('published_at', { ascending: false });
-			}
-
-			const { data, error: fetchError } = await query;
+			const { data, error: fetchError } = await fetchPublishedRecipes(supabase, {
+				orderBy: activeTab === 'latest' ? 'published_at' : undefined,
+				orderDirection: activeTab === 'latest' ? 'desc' : undefined,
+				limit: 30,
+			});
 
 			if (!mounted) return;
 
@@ -124,30 +89,26 @@ export default function Home() {
 				return;
 			}
 
-			const mapped: RecipeCardData[] =
-				((data ?? []) as unknown as SupabaseRecipeRow[]).map((recipe) => {
-					const saveCount = recipe.recipe_saves?.[0]?.count ?? 0;
-					const profile = recipe.profiles;
-					const author =
-						profile?.full_name ||
-						profile?.username ||
-						'Unknown cook';
-					return {
-						id: recipe.id.toString(),
-						title: recipe.title,
-						description: recipe.description ?? undefined,
-						imageUrl: recipe.hero_image_url ?? undefined,
-						authorName: author,
-						authorAvatar: profile?.avatar_url ?? undefined,
-						prepTime: recipe.prep_minutes ?? undefined,
-						cookTime: recipe.cook_minutes ?? undefined,
-						servings: recipe.servings ?? undefined,
-						wishlistCount: saveCount ?? undefined,
-						tags: recipe.tags ?? undefined,
-						publishedAt: recipe.published_at ?? undefined,
-						difficulty: recipe.difficulty ?? undefined,
-					};
-				});
+			const mapped: RecipeCardData[] = ((data ?? []) as RecipeRow[]).map((recipe) => {
+				const saveCount = recipe.recipe_saves?.[0]?.count ?? 0;
+				const profile = recipe.profiles;
+				const author = profile?.full_name || profile?.username || 'Unknown cook';
+				return {
+					id: recipe.id.toString(),
+					title: recipe.title,
+					description: recipe.description ?? undefined,
+					imageUrl: recipe.hero_image_url ?? undefined,
+					authorName: author,
+					authorAvatar: profile?.avatar_url ?? undefined,
+					prepTime: recipe.prep_minutes ?? undefined,
+					cookTime: recipe.cook_minutes ?? undefined,
+					servings: recipe.servings ?? undefined,
+					wishlistCount: saveCount ?? undefined,
+					tags: recipe.tags ?? undefined,
+					publishedAt: recipe.published_at ?? undefined,
+					difficulty: recipe.difficulty ?? undefined,
+				};
+			});
 
 			let sorted = mapped;
 			if (activeTab === 'popular') {
@@ -158,15 +119,12 @@ export default function Home() {
 
 			setRecipes(sorted);
 
-			if (userId) {
-				const { data: savedData } = await supabase
-					.from('recipe_saves')
-					.select('recipe_id')
-					.eq('user_id', userId);
+			if (userId && USE_SUPABASE) {
+				const { data: savedIdsData } = await getSavedRecipeIds(supabase, userId);
 				if (mounted) {
 					setSavedIds(
 						new Set(
-							(savedData ?? []).map((item) => item.recipe_id.toString()),
+							(savedIdsData ?? []).map((id) => id.toString()),
 						),
 					);
 				}
@@ -185,7 +143,7 @@ export default function Home() {
 
 	const handleToggleSave = useCallback(
 		async (recipeId: string) => {
-			if (!userId) {
+			if (!USE_SUPABASE || !userId || !supabase) {
 				setError('Please sign in to use your wishlist.');
 				setTimeout(() => setError(null), 2000);
 				return;
