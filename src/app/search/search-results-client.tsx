@@ -270,7 +270,7 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
               onChange={(event) => setQueryInput(event.target.value)}
               placeholder="Type a recipe name, ingredient, or chef…"
               aria-label="Search for recipes"
-              className="w-full rounded-full border border-border-subtle bg-white py-3 pl-12 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
+              className="w-full rounded-full border border-border-subtle bg-white py-3 pl-12 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
             />
           </div>
           <button

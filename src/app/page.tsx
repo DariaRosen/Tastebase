@@ -325,7 +325,7 @@ export default function Home() {
 							id="category-filter"
 							value={selectedCategory ?? 'ALL'}
 							onChange={handleSelectCategory}
-							className="h-10 rounded-full border border-border-subtle bg-white px-4 text-sm text-brand-secondary/80 shadow-sm focus:border-brand-secondary focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
+							className="h-10 rounded-full border border-border-subtle bg-white px-4 text-sm text-brand-secondary/80 shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
 						>
 							<option value="ALL">All categories</option>
 							{availableCategories.map((category) => (
@@ -338,7 +338,7 @@ export default function Home() {
 							id="difficulty-filter"
 							value={selectedDifficulty ?? 'ALL'}
 							onChange={handleSelectDifficulty}
-							className="h-10 rounded-full border border-border-subtle bg-white px-4 text-sm text-brand-secondary/80 shadow-sm focus:border-brand-secondary focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
+							className="h-10 rounded-full border border-border-subtle bg-white px-4 text-sm text-brand-secondary/80 shadow-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
 						>
 							<option value="ALL">All difficulties</option>
 							{availableDifficulties.map((difficulty) => (

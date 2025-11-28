@@ -90,15 +90,24 @@ export const ProfileForm = ({
 					throw new Error('You must be signed in to update your profile.');
 				}
 
-				// Convert avatar file to base64 data URL for demo mode
+				// Upload avatar to Cloudinary if a new file was selected
 				let avatarUrl = avatarPreview;
 				if (avatarFile) {
-					const reader = new FileReader();
-					avatarUrl = await new Promise<string>((resolve, reject) => {
-						reader.onload = () => resolve(reader.result as string);
-						reader.onerror = reject;
-						reader.readAsDataURL(avatarFile);
+					const uploadFormData = new FormData();
+					uploadFormData.append('file', avatarFile);
+
+					const uploadResponse = await fetch('/api/upload-avatar', {
+						method: 'POST',
+						body: uploadFormData,
 					});
+
+					if (!uploadResponse.ok) {
+						const errorData = await uploadResponse.json();
+						throw new Error(errorData.error || 'Failed to upload avatar image.');
+					}
+
+					const { url } = await uploadResponse.json();
+					avatarUrl = url;
 				}
 
 				const updated = updateDemoUser(demoUser.id, {
@@ -220,7 +229,7 @@ export const ProfileForm = ({
 						required
 						minLength={3}
 						maxLength={32}
-						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
 					/>
 				</label>
 				<label className="flex flex-col text-sm text-gray-700">
@@ -231,7 +240,7 @@ export const ProfileForm = ({
 						value={fullName}
 						onChange={(event) => setFullName(event.target.value)}
 						placeholder="Amy Santiago"
-						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
+						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
 					/>
 				</label>
 			</div>
@@ -245,7 +254,7 @@ export const ProfileForm = ({
 					onChange={(event) => setBio(event.target.value)}
 					placeholder="Short intro about you..."
 					rows={3}
-					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
+					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
 				/>
 			</label>
 
