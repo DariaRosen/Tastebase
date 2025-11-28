@@ -71,13 +71,22 @@ const profiles: DemoProfile[] = [
   },
 ];
 
+/**
+ * Demo Recipes
+ * 
+ * To add Cloudinary images, update the hero_image_url field with your Cloudinary URL.
+ * Format: 'https://res.cloudinary.com/YOUR_CLOUD_NAME/image/upload/vVERSION/FILENAME'
+ * 
+ * Example:
+ * hero_image_url: 'https://res.cloudinary.com/dool6mmp1/image/upload/v1764347281/1_zuvq2t.png'
+ */
 const recipes: DemoRecipe[] = [
   {
     id: 1,
     author_id: 'demo-user-1',
     title: 'Classic Margherita Pizza',
     description: 'A timeless Italian classic with fresh tomatoes, mozzarella, and basil. Simple ingredients that create magic.',
-    hero_image_url: null,
+    hero_image_url: 'https://res.cloudinary.com/dool6mmp1/image/upload/v1764347291/2_shnsad.png',
     servings: 4,
     prep_minutes: 20,
     cook_minutes: 15,
@@ -121,7 +130,7 @@ const recipes: DemoRecipe[] = [
     author_id: 'demo-user-2',
     title: 'Chocolate Chip Cookies',
     description: 'The perfect chewy chocolate chip cookies with crispy edges and soft centers. A crowd favorite!',
-    hero_image_url: null,
+    hero_image_url: 'https://res.cloudinary.com/dool6mmp1/image/upload/v1764347281/1_zuvq2t.png',
     servings: 24,
     prep_minutes: 15,
     cook_minutes: 12,
@@ -211,7 +220,7 @@ const recipes: DemoRecipe[] = [
     author_id: 'demo-user-1',
     title: 'Caesar Salad',
     description: 'Crisp romaine lettuce with homemade croutons, parmesan cheese, and a creamy Caesar dressing.',
-    hero_image_url: null,
+    hero_image_url: 'https://res.cloudinary.com/dool6mmp1/image/upload/v1764347282/4_uxx2eo.png',
     servings: 4,
     prep_minutes: 15,
     cook_minutes: 0,
@@ -305,7 +314,7 @@ const recipes: DemoRecipe[] = [
     author_id: 'demo-user-3',
     title: 'Avocado Toast',
     description: 'Simple, healthy, and delicious. Perfect for breakfast or a light lunch. Customize with your favorite toppings!',
-    hero_image_url: null,
+    hero_image_url: 'https://res.cloudinary.com/dool6mmp1/image/upload/v1764347289/6_ohjljw.png',
     servings: 2,
     prep_minutes: 5,
     cook_minutes: 5,
