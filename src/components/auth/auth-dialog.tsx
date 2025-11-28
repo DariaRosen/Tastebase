@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { signUpDemoUser, signInDemoUser } from '@/lib/demo-auth';
 
 interface AuthDialogProps {
   open: boolean;
@@ -132,8 +134,55 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
     setIsLoading(true);
     setMessage(null);
     setError(null);
+    
     try {
+      // Use demo auth when Supabase is disabled
+      if (!USE_SUPABASE) {
+        if (mode === 'login') {
+          const { user, error: signInError } = await signInDemoUser(email);
+          if (signInError) {
+            // If user doesn't exist, try to create them
+            const cleanedFullName = name.trim();
+            const { user: newUser, error: signUpError } = await signUpDemoUser(email, cleanedFullName);
+            if (signUpError) {
+              setError(signUpError.message);
+              setIsLoading(false);
+              return;
+            }
+            setMessage('Account created and signed in.');
+            onOpenChange(false);
+            // Refresh page to update auth state
+            setTimeout(() => window.location.reload(), 500);
+            return;
+          }
+          setMessage('Signed in.');
+          onOpenChange(false);
+          // Refresh page to update auth state
+          setTimeout(() => window.location.reload(), 500);
+        } else {
+          // Sign up mode
+          const cleanedFullName = name.trim();
+          const { user, error: signUpError } = await signUpDemoUser(email, cleanedFullName);
+          if (signUpError) {
+            setError(signUpError.message);
+            setIsLoading(false);
+            return;
+          }
+          setMessage('Account created. You are signed in.');
+          onOpenChange(false);
+          // Refresh page to update auth state
+          setTimeout(() => window.location.reload(), 500);
+        }
+        return;
+      }
+      
+      // Use Supabase auth
       const supabase = createClient();
+      if (!supabase) {
+        setError('Supabase client is not available. Please check your configuration.');
+        setIsLoading(false);
+        return;
+      }
       if (mode === 'login') {
         const fallbackUsername = fallbackUsernameFromEmail(email);
         // Try sign in; if it fails (user not found), auto-create then sign in
@@ -201,8 +250,38 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
     setIsLoading(true);
     setMessage(null);
     setError(null);
+    
     try {
+      // Use demo auth when Supabase is disabled
+      if (!USE_SUPABASE) {
+        const cleanedFullName = name.trim();
+        const { user, error: signInError } = await signInDemoUser(email);
+        if (signInError) {
+          // If user doesn't exist, create them
+          const { user: newUser, error: signUpError } = await signUpDemoUser(email, cleanedFullName);
+          if (signUpError) {
+            setError(signUpError.message);
+            setIsLoading(false);
+            return;
+          }
+          setMessage('Account created and signed in (dev).');
+          onOpenChange(false);
+          setTimeout(() => window.location.reload(), 500);
+          return;
+        }
+        setMessage('Signed in (dev).');
+        onOpenChange(false);
+        setTimeout(() => window.location.reload(), 500);
+        return;
+      }
+      
+      // Use Supabase auth
       const supabase = createClient();
+      if (!supabase) {
+        setError('Supabase client is not available. Please check your configuration.');
+        setIsLoading(false);
+        return;
+      }
       let { error: signInErr } = await supabase.auth.signInWithPassword({
         email,
         password: TEST_PASSWORD,
@@ -275,6 +354,14 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             {mode === 'login' ? 'Create account' : 'Have an account? Log in'}
           </button>
         </div>
+        {!USE_SUPABASE && (
+          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+            <p className="font-medium">Demo Mode Active</p>
+            <p className="mt-1 text-xs">
+              Using local demo authentication. Your account will be stored in browser storage.
+            </p>
+          </div>
+        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'signup' && (
             <label className="block">

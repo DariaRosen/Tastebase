@@ -76,9 +76,20 @@ export type RecipeDetailRow = {
 };
 
 // Convert demo recipe to Supabase-like format
-const convertDemoRecipeToRow = (recipe: DemoRecipe): RecipeRow => {
+export const convertDemoRecipeToRow = (recipe: DemoRecipe): RecipeRow => {
   const profile = getProfileById(recipe.author_id);
-  const saveCount = getRecipeSaveCount(recipe.id);
+  // Use demo-auth for save count if available
+  let saveCount = 0;
+  if (typeof window !== 'undefined') {
+    try {
+      const { getRecipeSaveCount: getCount } = require('./demo-auth');
+      saveCount = getCount(recipe.id);
+    } catch {
+      saveCount = getRecipeSaveCount(recipe.id);
+    }
+  } else {
+    saveCount = getRecipeSaveCount(recipe.id);
+  }
 
   return {
     id: recipe.id,
@@ -104,7 +115,18 @@ const convertDemoRecipeToRow = (recipe: DemoRecipe): RecipeRow => {
 
 const convertDemoRecipeToDetailRow = (recipe: DemoRecipe): RecipeDetailRow => {
   const profile = getProfileById(recipe.author_id);
-  const saveCount = getRecipeSaveCount(recipe.id);
+  // Use demo-auth for save count if available
+  let saveCount = 0;
+  if (typeof window !== 'undefined') {
+    try {
+      const { getRecipeSaveCount: getCount } = require('./demo-auth');
+      saveCount = getCount(recipe.id);
+    } catch {
+      saveCount = getRecipeSaveCount(recipe.id);
+    }
+  } else {
+    saveCount = getRecipeSaveCount(recipe.id);
+  }
 
   return {
     id: recipe.id,
@@ -528,7 +550,15 @@ export const checkRecipeSaved = async (
     }
   }
 
-  // Use local data
+  // Use local data - check demo-auth first
+  if (typeof window !== 'undefined') {
+    try {
+      const { isRecipeSavedByDemoUser } = require('./demo-auth');
+      return { data: isRecipeSavedByDemoUser(userId, recipeId), error: null };
+    } catch {
+      return { data: isRecipeSavedByUser(recipeId, userId), error: null };
+    }
+  }
   return { data: isRecipeSavedByUser(recipeId, userId), error: null };
 };
 
@@ -556,8 +586,15 @@ export const getSavedRecipeIds = async (
     }
   }
 
-  // Use local data - return empty array as demo users don't have saved recipes by default
-  // This would need to be enhanced if you want to simulate saved recipes in demo mode
+  // Use local data - get from demo-auth
+  if (typeof window !== 'undefined') {
+    try {
+      const { getSavedRecipeIdsForDemoUser } = require('./demo-auth');
+      return { data: getSavedRecipeIdsForDemoUser(userId), error: null };
+    } catch {
+      return { data: [], error: null };
+    }
+  }
   return { data: [], error: null };
 };
 

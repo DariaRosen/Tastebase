@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase';
 import { RecipeCard } from '@/components/recipe-card';
 import { USE_SUPABASE } from '@/lib/data-config';
 import { searchRecipesData, getSavedRecipeIds, type RecipeRow } from '@/lib/data-service';
+import { getDemoSession, getSavedRecipeIdsForDemoUser, saveRecipeToWishlist, removeRecipeFromWishlist } from '@/lib/demo-auth';
 
 
 type RecipeCardData = {
@@ -120,10 +121,18 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
 
       setRecipes(mapped);
 
-      if (userId && USE_SUPABASE) {
-        const { data: savedIdsData } = await getSavedRecipeIds(supabase, userId);
-        if (mounted) {
-          setSavedIds(new Set((savedIdsData ?? []).map((id) => id.toString())));
+      if (userId) {
+        if (USE_SUPABASE) {
+          const { data: savedIdsData } = await getSavedRecipeIds(supabase, userId);
+          if (mounted) {
+            setSavedIds(new Set((savedIdsData ?? []).map((id) => id.toString())));
+          }
+        } else {
+          // Use demo wishlist
+          const savedIdsData = getSavedRecipeIdsForDemoUser(userId);
+          if (mounted) {
+            setSavedIds(new Set(savedIdsData.map((id) => id.toString())));
+          }
         }
       } else {
         setSavedIds(new Set());
@@ -153,8 +162,54 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
 
   const handleToggleSave = useCallback(
     async (recipeId: string) => {
-      if (!USE_SUPABASE || !userId || !supabase) {
+      if (!userId) {
         setError('Please sign in to manage your wishlist.');
+        setTimeout(() => setError(null), 2000);
+        return;
+      }
+
+      if (!USE_SUPABASE) {
+        // Use demo wishlist
+        const currentlySaved = savedIds.has(recipeId);
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          if (currentlySaved) {
+            next.delete(recipeId);
+          } else {
+            next.add(recipeId);
+          }
+          return next;
+        });
+
+        setRecipes((prev) =>
+          prev.map((recipe) =>
+            recipe.id === recipeId
+              ? {
+                  ...recipe,
+                  wishlistCount: recipe.wishlistCount + (currentlySaved ? -1 : 1),
+                }
+              : recipe
+          )
+        );
+
+        if (currentlySaved) {
+          const { error } = removeRecipeFromWishlist(userId, Number(recipeId));
+          if (error) {
+            setError(error.message);
+            setTimeout(() => setError(null), 2000);
+          }
+        } else {
+          const { error } = saveRecipeToWishlist(userId, Number(recipeId));
+          if (error) {
+            setError(error.message);
+            setTimeout(() => setError(null), 2000);
+          }
+        }
+        return;
+      }
+
+      if (!supabase) {
+        setError('Authentication is not available.');
         setTimeout(() => setError(null), 2000);
         return;
       }

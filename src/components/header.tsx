@@ -6,6 +6,8 @@ import { Search, LogIn } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { getDemoSession } from '@/lib/demo-auth';
 import { AuthDialog } from './auth/auth-dialog';
 import { UserMenu } from './auth/user-menu';
 
@@ -16,6 +18,29 @@ export const Header = () => {
   const router = useRouter();
 
   useEffect(() => {
+    if (!USE_SUPABASE) {
+      // Check demo auth
+      const demoUser = getDemoSession();
+      setIsLoggedIn(Boolean(demoUser));
+      
+      // Listen for storage changes (when user signs in/out in another tab)
+      const handleStorageChange = () => {
+        const user = getDemoSession();
+        setIsLoggedIn(Boolean(user));
+      };
+      window.addEventListener('storage', handleStorageChange);
+      // Also check periodically for same-tab changes
+      const interval = setInterval(() => {
+        const user = getDemoSession();
+        setIsLoggedIn(Boolean(user));
+      }, 1000);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        clearInterval(interval);
+      };
+    }
+
     const supabase = createClient();
     let mounted = true;
 

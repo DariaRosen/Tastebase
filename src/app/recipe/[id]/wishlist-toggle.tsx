@@ -1,8 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase";
+import { USE_SUPABASE } from "@/lib/data-config";
+import { getDemoSession, saveRecipeToWishlist, removeRecipeFromWishlist, isRecipeSavedByDemoUser, getRecipeSaveCount } from "@/lib/demo-auth";
 
 interface WishlistToggleProps {
   recipeId: number;
@@ -15,11 +17,48 @@ export function WishlistToggle({
   initialSaved,
   initialCount,
 }: WishlistToggleProps) {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => (USE_SUPABASE ? createClient() : null), []);
   const [isSaved, setIsSaved] = useState(initialSaved);
   const [count, setCount] = useState(initialCount);
   const [message, setMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Update saved state and count from demo data if not using Supabase
+  useEffect(() => {
+    if (!USE_SUPABASE) {
+      const demoUser = getDemoSession();
+      if (demoUser) {
+        const saved = isRecipeSavedByDemoUser(demoUser.id, recipeId);
+        const saveCount = getRecipeSaveCount(recipeId);
+        setIsSaved(saved);
+        setCount(saveCount);
+      } else {
+        setIsSaved(false);
+        setCount(getRecipeSaveCount(recipeId));
+      }
+      
+      // Listen for storage changes
+      const handleStorageChange = () => {
+        const user = getDemoSession();
+        if (user) {
+          const saved = isRecipeSavedByDemoUser(user.id, recipeId);
+          const saveCount = getRecipeSaveCount(recipeId);
+          setIsSaved(saved);
+          setCount(saveCount);
+        } else {
+          setIsSaved(false);
+          setCount(getRecipeSaveCount(recipeId));
+        }
+      };
+      window.addEventListener('storage', handleStorageChange);
+      const interval = setInterval(handleStorageChange, 500);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        clearInterval(interval);
+      };
+    }
+  }, [recipeId]);
 
   const handleToggle = async () => {
     if (isLoading) {
@@ -29,24 +68,56 @@ export function WishlistToggle({
     setIsLoading(true);
     setMessage(null);
 
+    if (!USE_SUPABASE) {
+      // Use demo auth
+      const demoUser = getDemoSession();
+      if (!demoUser) {
+        setMessage("Please sign in to add recipes to your wishlist.");
+        setIsLoading(false);
+        return;
+      }
+
+      if (isSaved) {
+        const { error } = removeRecipeFromWishlist(demoUser.id, recipeId);
+        if (error) {
+          setMessage(error.message);
+          setIsLoading(false);
+          return;
+        }
+        setIsSaved(false);
+        setCount((prev) => Math.max(prev - 1, 0));
+      } else {
+        const { error } = saveRecipeToWishlist(demoUser.id, recipeId);
+        if (error) {
+          setMessage(error.message);
+          setIsLoading(false);
+          return;
+        }
+        setIsSaved(true);
+        setCount((prev) => prev + 1);
+      }
+      setIsLoading(false);
+      return;
+    }
+
+    // Use Supabase
+    if (!supabase) {
+      setMessage("Authentication is not available.");
+      setIsLoading(false);
+      return;
+    }
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) {
-      console.info('[WishlistToggle] unauthenticated user attempted to toggle', {
-        recipeId,
-      });
       setMessage("Please sign in to add recipes to your wishlist.");
       setIsLoading(false);
       return;
     }
 
     if (isSaved) {
-      console.info('[WishlistToggle] removing from wishlist', {
-        recipeId,
-        userId: user.id,
-      });
       await supabase
         .from("recipe_saves")
         .delete()
@@ -55,10 +126,6 @@ export function WishlistToggle({
       setIsSaved(false);
       setCount((prev) => Math.max(prev - 1, 0));
     } else {
-      console.info('[WishlistToggle] adding to wishlist', {
-        recipeId,
-        userId: user.id,
-      });
       await supabase.from("recipe_saves").insert({
         user_id: user.id,
         recipe_id: recipeId,
