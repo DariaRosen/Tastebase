@@ -11,6 +11,7 @@ export interface DemoUser {
   full_name: string | null;
   username: string | null;
   avatar_url: string | null;
+  bio: string | null;
   created_at: string;
 }
 
@@ -98,6 +99,7 @@ export const signUpDemoUser = async (
       full_name: fullName?.trim() || null,
       username,
       avatar_url: null,
+      bio: null,
       created_at: new Date().toISOString(),
     };
 
@@ -156,7 +158,7 @@ export const signOutDemoUser = (): void => {
 // Update demo user profile
 export const updateDemoUser = (
   userId: string,
-  updates: Partial<Pick<DemoUser, 'full_name' | 'username' | 'avatar_url'>>
+  updates: Partial<Pick<DemoUser, 'full_name' | 'username' | 'avatar_url' | 'bio'>>
 ): DemoUser | null => {
   try {
     const users = getDemoUsers();
