@@ -9,6 +9,7 @@ export interface CreateRecipeState {
 	errors?: Record<string, string>;
 	message?: string;
 	redirectTo?: string;
+	heroImageUrl?: string;
 }
 
 const parseNumber = (value: FormDataEntryValue | null) => {
