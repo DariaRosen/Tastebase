@@ -5,27 +5,9 @@ import Link from 'next/link';
 import { Header } from '@/components/header';
 import { RecipeCard } from '@/components/recipe-card';
 import { createClient } from '@/lib/supabase';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { fetchSavedRecipes, type RecipeRow } from '@/lib/data-service';
 
-type SavedRecipeRow = {
-  recipe_id: number;
-  recipes: {
-    id: number;
-    title: string;
-    description: string | null;
-    hero_image_url: string | null;
-    servings: number | null;
-    prep_minutes: number | null;
-    cook_minutes: number | null;
-    tags: string[] | null;
-    difficulty: string | null;
-    profiles: {
-      full_name: string | null;
-      username: string | null;
-      avatar_url: string | null;
-    } | null;
-    recipe_saves: { count: number | null }[] | null;
-  } | null;
-};
 
 type RecipeCardData = {
   id: string;
@@ -43,7 +25,7 @@ type RecipeCardData = {
 };
 
 export default function WishlistPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => (USE_SUPABASE ? createClient() : null), []);
   const [userId, setUserId] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<RecipeCardData[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
@@ -51,6 +33,11 @@ export default function WishlistPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!USE_SUPABASE || !supabase) {
+      setUserId(null);
+      return;
+    }
+
     let mounted = true;
     (async () => {
       const { data } = await supabase.auth.getUser();
@@ -78,31 +65,7 @@ export default function WishlistPage() {
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('recipe_saves')
-        .select(
-          `
-          recipe_id,
-          recipes (
-            id,
-            title,
-            description,
-            hero_image_url,
-            servings,
-            prep_minutes,
-            cook_minutes,
-            tags,
-            difficulty,
-            profiles:profiles!recipes_author_id_fkey (
-              full_name,
-              username,
-              avatar_url
-            ),
-            recipe_saves:recipe_saves ( count )
-          )
-        `
-        )
-        .eq('user_id', userId);
+      const { data, error: fetchError } = await fetchSavedRecipes(supabase, userId);
 
       if (!mounted) return;
 
@@ -114,28 +77,25 @@ export default function WishlistPage() {
         return;
       }
 
-      const mapped: RecipeCardData[] = ((data ?? []) as unknown as SavedRecipeRow[])
-        .map((row) => row.recipes)
-        .filter((recipe): recipe is NonNullable<SavedRecipeRow['recipes']> => Boolean(recipe))
-        .map((recipe) => {
-          const saveCount = recipe.recipe_saves?.[0]?.count ?? 0;
-          const profile = recipe.profiles;
-          const author = profile?.full_name || profile?.username || 'Unknown cook';
-          return {
-            id: recipe.id.toString(),
-            title: recipe.title,
-            description: recipe.description ?? undefined,
-            imageUrl: recipe.hero_image_url ?? undefined,
-            authorName: author,
-            authorAvatar: profile?.avatar_url ?? undefined,
-            prepTime: recipe.prep_minutes ?? undefined,
-            cookTime: recipe.cook_minutes ?? undefined,
-            servings: recipe.servings ?? undefined,
-            wishlistCount: saveCount ?? undefined,
-            tags: recipe.tags ?? undefined,
-            difficulty: recipe.difficulty ?? undefined,
-          };
-        });
+      const mapped: RecipeCardData[] = ((data ?? []) as RecipeRow[]).map((recipe) => {
+        const saveCount = recipe.recipe_saves?.[0]?.count ?? 0;
+        const profile = recipe.profiles;
+        const author = profile?.full_name || profile?.username || 'Unknown cook';
+        return {
+          id: recipe.id.toString(),
+          title: recipe.title,
+          description: recipe.description ?? undefined,
+          imageUrl: recipe.hero_image_url ?? undefined,
+          authorName: author,
+          authorAvatar: profile?.avatar_url ?? undefined,
+          prepTime: recipe.prep_minutes ?? undefined,
+          cookTime: recipe.cook_minutes ?? undefined,
+          servings: recipe.servings ?? undefined,
+          wishlistCount: saveCount ?? undefined,
+          tags: recipe.tags ?? undefined,
+          difficulty: recipe.difficulty ?? undefined,
+        };
+      });
 
       setRecipes(mapped);
       setSavedIds(new Set(mapped.map((recipe) => recipe.id)));
@@ -151,7 +111,7 @@ export default function WishlistPage() {
 
   const handleToggleSave = useCallback(
     async (recipeId: string) => {
-      if (!userId) {
+      if (!USE_SUPABASE || !userId || !supabase) {
         setError('Please sign in to manage your wishlist.');
         setTimeout(() => setError(null), 2000);
         return;
