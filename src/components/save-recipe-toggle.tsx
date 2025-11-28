@@ -1,8 +1,10 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Heart } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { getDemoSession, saveRecipeToWishlist, removeRecipeFromWishlist, isRecipeSavedByDemoUser, getRecipeSaveCount } from '@/lib/demo-auth';
 
 interface SaveRecipeToggleProps {
 	recipeId: number;
@@ -15,16 +17,92 @@ export const SaveRecipeToggle = ({
 	initialSaved,
 	initialCount,
 }: SaveRecipeToggleProps) => {
-	const supabase = useMemo(() => createClient(), []);
+	const supabase = useMemo(() => (USE_SUPABASE ? createClient() : null), []);
 	const [isSaved, setIsSaved] = useState(initialSaved);
 	const [count, setCount] = useState(initialCount);
 	const [message, setMessage] = useState<string | null>(null);
 	const [isPending, setIsPending] = useState(false);
 
+	// Update saved state and count from demo data if not using Supabase
+	useEffect(() => {
+		if (!USE_SUPABASE) {
+			const demoUser = getDemoSession();
+			if (demoUser) {
+				const saved = isRecipeSavedByDemoUser(demoUser.id, recipeId);
+				const saveCount = getRecipeSaveCount(recipeId);
+				setIsSaved(saved);
+				setCount(saveCount);
+			} else {
+				setIsSaved(false);
+				setCount(getRecipeSaveCount(recipeId));
+			}
+			
+			// Listen for storage changes
+			const handleStorageChange = () => {
+				const user = getDemoSession();
+				if (user) {
+					const saved = isRecipeSavedByDemoUser(user.id, recipeId);
+					const saveCount = getRecipeSaveCount(recipeId);
+					setIsSaved(saved);
+					setCount(saveCount);
+				} else {
+					setIsSaved(false);
+					setCount(getRecipeSaveCount(recipeId));
+				}
+			};
+			window.addEventListener('storage', handleStorageChange);
+			const interval = setInterval(handleStorageChange, 500);
+			
+			return () => {
+				window.removeEventListener('storage', handleStorageChange);
+				clearInterval(interval);
+			};
+		}
+	}, [recipeId]);
+
 	const toggleSave = async () => {
 		if (isPending) return;
 		setIsPending(true);
 		setMessage(null);
+
+		if (!USE_SUPABASE) {
+			// Use demo auth
+			const demoUser = getDemoSession();
+			if (!demoUser) {
+				setMessage('Please sign in to add recipes to your wishlist.');
+				setIsPending(false);
+				return;
+			}
+
+			if (isSaved) {
+				const { error } = removeRecipeFromWishlist(demoUser.id, recipeId);
+				if (error) {
+					setMessage(error.message);
+					setIsPending(false);
+					return;
+				}
+				setIsSaved(false);
+				setCount((prev) => Math.max(prev - 1, 0));
+			} else {
+				const { error } = saveRecipeToWishlist(demoUser.id, recipeId);
+				if (error) {
+					setMessage(error.message);
+					setIsPending(false);
+					return;
+				}
+				setIsSaved(true);
+				setCount((prev) => prev + 1);
+			}
+			setIsPending(false);
+			return;
+		}
+
+		// Use Supabase
+		if (!supabase) {
+			setMessage('Authentication is not available.');
+			setIsPending(false);
+			return;
+		}
 
 		const {
 			data: { user },

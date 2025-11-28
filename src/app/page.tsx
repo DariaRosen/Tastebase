@@ -8,6 +8,7 @@ import { RecipeCard } from '@/components/recipe-card';
 import { createClient } from '@/lib/supabase';
 import { USE_SUPABASE } from '@/lib/data-config';
 import { fetchPublishedRecipes, getSavedRecipeIds, type RecipeRow } from '@/lib/data-service';
+import { getDemoSession, getSavedRecipeIdsForDemoUser, saveRecipeToWishlist, removeRecipeFromWishlist } from '@/lib/demo-auth';
 
 type Tab = 'latest' | 'popular';
 
@@ -43,9 +44,28 @@ export default function Home() {
 
 	useEffect(() => {
 		if (!USE_SUPABASE) {
-			setIsLoggedIn(false);
-			setUserId(null);
-			return;
+			// Check demo auth
+			const demoUser = getDemoSession();
+			setIsLoggedIn(Boolean(demoUser));
+			setUserId(demoUser?.id ?? null);
+			
+			// Listen for storage changes
+			const handleStorageChange = () => {
+				const user = getDemoSession();
+				setIsLoggedIn(Boolean(user));
+				setUserId(user?.id ?? null);
+			};
+			window.addEventListener('storage', handleStorageChange);
+			const interval = setInterval(() => {
+				const user = getDemoSession();
+				setIsLoggedIn(Boolean(user));
+				setUserId(user?.id ?? null);
+			}, 1000);
+			
+			return () => {
+				window.removeEventListener('storage', handleStorageChange);
+				clearInterval(interval);
+			};
 		}
 
 		if (!supabase) return;
@@ -119,14 +139,22 @@ export default function Home() {
 
 			setRecipes(sorted);
 
-			if (userId && USE_SUPABASE) {
-				const { data: savedIdsData } = await getSavedRecipeIds(supabase, userId);
-				if (mounted) {
-					setSavedIds(
-						new Set(
-							(savedIdsData ?? []).map((id) => id.toString()),
-						),
-					);
+			if (userId) {
+				if (USE_SUPABASE) {
+					const { data: savedIdsData } = await getSavedRecipeIds(supabase, userId);
+					if (mounted) {
+						setSavedIds(
+							new Set(
+								(savedIdsData ?? []).map((id) => id.toString()),
+							),
+						);
+					}
+				} else {
+					// Use demo wishlist
+					const savedIdsData = getSavedRecipeIdsForDemoUser(userId);
+					if (mounted) {
+						setSavedIds(new Set(savedIdsData.map((id) => id.toString())));
+					}
 				}
 			} else {
 				setSavedIds(new Set());
@@ -143,7 +171,7 @@ export default function Home() {
 
 	const handleToggleSave = useCallback(
 		async (recipeId: string) => {
-			if (!USE_SUPABASE || !userId || !supabase) {
+			if (!userId) {
 				setError('Please sign in to use your wishlist.');
 				setTimeout(() => setError(null), 2000);
 				return;
@@ -159,6 +187,53 @@ export default function Home() {
 				}
 				return next;
 			});
+
+			if (!USE_SUPABASE) {
+				// Use demo wishlist
+				if (currentlySaved) {
+					const { error } = removeRecipeFromWishlist(userId, Number(recipeId));
+					if (error) {
+						setError(error.message);
+						setTimeout(() => setError(null), 2000);
+						return;
+					}
+					setRecipes((prev) =>
+						prev.map((recipe) =>
+							recipe.id === recipeId
+								? {
+										...recipe,
+										wishlistCount: Math.max((recipe.wishlistCount ?? 1) - 1, 0),
+								  }
+								: recipe,
+						),
+					);
+				} else {
+					const { error } = saveRecipeToWishlist(userId, Number(recipeId));
+					if (error) {
+						setError(error.message);
+						setTimeout(() => setError(null), 2000);
+						return;
+					}
+					setRecipes((prev) =>
+						prev.map((recipe) =>
+							recipe.id === recipeId
+								? {
+										...recipe,
+										wishlistCount: (recipe.wishlistCount ?? 0) + 1,
+								  }
+								: recipe,
+						),
+					);
+				}
+				return;
+			}
+
+			// Use Supabase
+			if (!supabase) {
+				setError('Authentication is not available.');
+				setTimeout(() => setError(null), 2000);
+				return;
+			}
 
 			if (currentlySaved) {
 				await supabase
