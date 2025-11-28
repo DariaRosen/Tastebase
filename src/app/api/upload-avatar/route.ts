@@ -30,6 +30,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!uploadPreset) {
+      return NextResponse.json(
+        { error: 'Cloudinary upload preset not configured. Please set NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in environment variables.' },
+        { status: 500 }
+      );
+    }
+
+    // TypeScript now knows uploadPreset is a string after the check above
+    // Use type assertion to satisfy TypeScript
+    const preset = uploadPreset as string;
+
     // Convert file to base64 for Cloudinary upload
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
@@ -40,7 +51,7 @@ export async function POST(request: NextRequest) {
     // which means it requires authentication but works from server-side
     const uploadFormData = new FormData();
     uploadFormData.append('file', dataUri);
-    uploadFormData.append('upload_preset', uploadPreset);
+    uploadFormData.append('upload_preset', preset);
     uploadFormData.append('folder', 'Tastebase/avatars'); // Save avatars in Tastebase folder
 
     const cloudinaryResponse = await fetch(
