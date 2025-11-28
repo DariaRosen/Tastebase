@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { getDemoSession, updateDemoUser } from '@/lib/demo-auth';
 
 interface ProfileFormProps {
 	initialUsername?: string | null;
@@ -19,6 +22,7 @@ export const ProfileForm = ({
 	initialBio,
 	initialAvatarUrl,
 }: ProfileFormProps) => {
+	const router = useRouter();
 	const [username, setUsername] = useState(initialUsername ?? '');
 	const [fullName, setFullName] = useState(initialFullName ?? '');
 	const [bio, setBio] = useState(initialBio ?? '');
@@ -26,6 +30,21 @@ export const ProfileForm = ({
 	const [avatarFile, setAvatarFile] = useState<File | null>(null);
 	const [isSaving, setIsSaving] = useState(false);
 	const [status, setStatus] = useState<Status>({ type: 'idle' });
+
+	// Load demo user data if not using Supabase
+	useEffect(() => {
+		if (!USE_SUPABASE) {
+			const demoUser = getDemoSession();
+			if (!demoUser) {
+				router.push('/');
+				return;
+			}
+			setUsername(demoUser.username ?? '');
+			setFullName(demoUser.full_name ?? '');
+			setBio(demoUser.bio ?? '');
+			setAvatarPreview(demoUser.avatar_url);
+		}
+	}, [router]);
 
 	useEffect(() => {
 		setUsername(initialUsername ?? '');
@@ -47,6 +66,45 @@ export const ProfileForm = ({
 		setIsSaving(true);
 		setStatus({ type: 'idle' });
 		try {
+			if (!USE_SUPABASE) {
+				// Use demo auth
+				const demoUser = getDemoSession();
+				if (!demoUser) {
+					throw new Error('You must be signed in to update your profile.');
+				}
+
+				// Convert avatar file to base64 data URL for demo mode
+				let avatarUrl = avatarPreview;
+				if (avatarFile) {
+					const reader = new FileReader();
+					avatarUrl = await new Promise<string>((resolve, reject) => {
+						reader.onload = () => resolve(reader.result as string);
+						reader.onerror = reject;
+						reader.readAsDataURL(avatarFile);
+					});
+				}
+
+				const updated = updateDemoUser(demoUser.id, {
+					username: username || null,
+					full_name: fullName || null,
+					avatar_url: avatarUrl,
+					bio: bio || null,
+				});
+
+				if (!updated) {
+					throw new Error('Failed to update profile.');
+				}
+
+				setStatus({ type: 'success', message: 'Profile updated successfully.' });
+				setAvatarFile(null);
+
+				setTimeout(() => {
+					router.push('/');
+				}, 1000);
+				return;
+			}
+
+			// Use Supabase
 			const supabase = createClient();
 			const {
 				data: { user },
