@@ -21,21 +21,23 @@ export async function POST(request: NextRequest) {
 
     // Get Cloudinary credentials from environment variables
     const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
     if (!cloudName) {
       return NextResponse.json(
         { error: 'Cloudinary cloud name not configured. Please set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME in environment variables.' },
         { status: 500 }
       );
     }
-    // Use default upload preset if not specified (user should create an unsigned upload preset in Cloudinary)
-    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default';
 
     // Convert file to base64 for Cloudinary upload
     const arrayBuffer = await file.arrayBuffer();
     const base64 = Buffer.from(arrayBuffer).toString('base64');
     const dataUri = `data:${file.type};base64,${base64}`;
 
-    // Upload to Cloudinary using unsigned upload preset
+    // Upload to Cloudinary using the preset
+    // The preset (ml_default) is configured as "Signed" in Cloudinary,
+    // which means it requires authentication but works from server-side
     const uploadFormData = new FormData();
     uploadFormData.append('file', dataUri);
     uploadFormData.append('upload_preset', uploadPreset);
