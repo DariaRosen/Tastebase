@@ -20,7 +20,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Get Cloudinary credentials from environment variables
-    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'dool6mmp1';
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    if (!cloudName) {
+      return NextResponse.json(
+        { error: 'Cloudinary cloud name not configured. Please set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME in environment variables.' },
+        { status: 500 }
+      );
+    }
     // Use default upload preset if not specified (user should create an unsigned upload preset in Cloudinary)
     const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'ml_default';
 
@@ -33,7 +39,7 @@ export async function POST(request: NextRequest) {
     const uploadFormData = new FormData();
     uploadFormData.append('file', dataUri);
     uploadFormData.append('upload_preset', uploadPreset);
-    uploadFormData.append('folder', 'avatars'); // Organize avatars in a folder
+    uploadFormData.append('folder', 'Tastebase/avatars'); // Save avatars in Tastebase folder
 
     const cloudinaryResponse = await fetch(
       `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
