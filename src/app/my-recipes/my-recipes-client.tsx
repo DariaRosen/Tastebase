@@ -7,6 +7,7 @@ import { RecipeCard } from '@/components/recipe-card';
 import { createClient } from '@/lib/supabase';
 import { USE_SUPABASE } from '@/lib/data-config';
 import { fetchRecipesByAuthor, type RecipeRow } from '@/lib/data-service';
+import { getDemoSession } from '@/lib/demo-auth';
 
 
 type RecipeCardData = {
@@ -32,10 +33,29 @@ export default function MyRecipesClient() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!USE_SUPABASE || !supabase) {
-      setUserId(null);
-      return;
+    if (!USE_SUPABASE) {
+      // Check demo auth
+      const demoUser = getDemoSession();
+      setUserId(demoUser?.id ?? null);
+      
+      // Listen for storage changes
+      const handleStorageChange = () => {
+        const user = getDemoSession();
+        setUserId(user?.id ?? null);
+      };
+      window.addEventListener('storage', handleStorageChange);
+      const interval = setInterval(() => {
+        const user = getDemoSession();
+        setUserId(user?.id ?? null);
+      }, 1000);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        clearInterval(interval);
+      };
     }
+
+    if (!supabase) return;
 
     let mounted = true;
     (async () => {

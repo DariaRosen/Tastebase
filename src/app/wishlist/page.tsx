@@ -6,7 +6,9 @@ import { Header } from '@/components/header';
 import { RecipeCard } from '@/components/recipe-card';
 import { createClient } from '@/lib/supabase';
 import { USE_SUPABASE } from '@/lib/data-config';
-import { fetchSavedRecipes, type RecipeRow } from '@/lib/data-service';
+import { fetchSavedRecipes, type RecipeRow, convertDemoRecipeToRow } from '@/lib/data-service';
+import { getDemoSession, getSavedRecipeIdsForDemoUser, saveRecipeToWishlist, removeRecipeFromWishlist, isRecipeSavedByDemoUser } from '@/lib/demo-auth';
+import { getSavedRecipesForUser } from '@/lib/demo-data';
 
 
 type RecipeCardData = {
@@ -33,7 +35,29 @@ export default function WishlistPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!USE_SUPABASE || !supabase) {
+    if (!USE_SUPABASE) {
+      // Check demo auth
+      const demoUser = getDemoSession();
+      setUserId(demoUser?.id ?? null);
+      
+      // Listen for storage changes
+      const handleStorageChange = () => {
+        const user = getDemoSession();
+        setUserId(user?.id ?? null);
+      };
+      window.addEventListener('storage', handleStorageChange);
+      const interval = setInterval(() => {
+        const user = getDemoSession();
+        setUserId(user?.id ?? null);
+      }, 1000);
+      
+      return () => {
+        window.removeEventListener('storage', handleStorageChange);
+        clearInterval(interval);
+      };
+    }
+
+    if (!supabase) {
       setUserId(null);
       return;
     }
@@ -64,6 +88,37 @@ export default function WishlistPage() {
       }
       setIsLoading(true);
       setError(null);
+
+      if (!USE_SUPABASE) {
+        // Use demo wishlist
+        const savedRecipes = getSavedRecipesForUser(userId);
+        const mapped: RecipeCardData[] = savedRecipes.map((recipe) => {
+          const row = convertDemoRecipeToRow(recipe);
+          const saveCount = row.recipe_saves?.[0]?.count ?? 0;
+          const profile = row.profiles;
+          const author = profile?.full_name || profile?.username || 'Unknown cook';
+          return {
+            id: recipe.id.toString(),
+            title: recipe.title,
+            description: recipe.description ?? undefined,
+            imageUrl: recipe.hero_image_url ?? undefined,
+            authorName: author,
+            authorAvatar: profile?.avatar_url ?? undefined,
+            prepTime: recipe.prep_minutes ?? undefined,
+            cookTime: recipe.cook_minutes ?? undefined,
+            servings: recipe.servings ?? undefined,
+            wishlistCount: saveCount ?? undefined,
+            tags: recipe.tags ?? undefined,
+            difficulty: recipe.difficulty ?? undefined,
+          };
+        });
+        
+        if (!mounted) return;
+        setRecipes(mapped);
+        setSavedIds(new Set(mapped.map((recipe) => recipe.id)));
+        setIsLoading(false);
+        return;
+      }
 
       const { data, error: fetchError } = await fetchSavedRecipes(supabase, userId);
 
@@ -111,8 +166,39 @@ export default function WishlistPage() {
 
   const handleToggleSave = useCallback(
     async (recipeId: string) => {
-      if (!USE_SUPABASE || !userId || !supabase) {
+      if (!userId) {
         setError('Please sign in to manage your wishlist.');
+        setTimeout(() => setError(null), 2000);
+        return;
+      }
+
+      if (!USE_SUPABASE) {
+        // Use demo wishlist
+        const isSaved = isRecipeSavedByDemoUser(userId, Number(recipeId));
+        
+        if (isSaved) {
+          const { error } = removeRecipeFromWishlist(userId, Number(recipeId));
+          if (error) {
+            setError(error.message);
+            setTimeout(() => setError(null), 2000);
+            return;
+          }
+          setRecipes((prev) => prev.filter((recipe) => recipe.id !== recipeId));
+        } else {
+          const { error } = saveRecipeToWishlist(userId, Number(recipeId));
+          if (error) {
+            setError(error.message);
+            setTimeout(() => setError(null), 2000);
+            return;
+          }
+          // Reload to show the new saved recipe
+          window.location.reload();
+        }
+        return;
+      }
+
+      if (!supabase) {
+        setError('Authentication is not available.');
         setTimeout(() => setError(null), 2000);
         return;
       }

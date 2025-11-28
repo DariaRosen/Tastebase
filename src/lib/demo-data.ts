@@ -174,7 +174,7 @@ const recipes: DemoRecipe[] = [
     author_id: 'demo-user-3',
     title: 'Beef Stir Fry',
     description: 'Quick and flavorful stir fry with tender beef, crisp vegetables, and a savory sauce. Ready in 20 minutes!',
-    hero_image_url: null,
+    hero_image_url: 'https://res.cloudinary.com/dool6mmp1/image/upload/v1764347293/3_jqpnel.png',
     servings: 4,
     prep_minutes: 10,
     cook_minutes: 10,
@@ -266,7 +266,7 @@ const recipes: DemoRecipe[] = [
     author_id: 'demo-user-2',
     title: 'Chicken Tikka Masala',
     description: 'Creamy, spiced Indian curry with tender chicken pieces. Perfect served with basmati rice or naan bread.',
-    hero_image_url: null,
+    hero_image_url: 'https://res.cloudinary.com/dool6mmp1/image/upload/v1764347286/5_mu9urr.png',
     servings: 6,
     prep_minutes: 30,
     cook_minutes: 40,
@@ -359,8 +359,18 @@ const recipeSaves: DemoRecipeSave[] = [
   { id: 3, user_id: 'demo-user-3', recipe_id: 3, created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString() },
 ];
 
-// Helper function to get save count for a recipe
+// Helper function to get save count for a recipe (deprecated - use demo-auth instead)
 export const getRecipeSaveCount = (recipeId: number): number => {
+  // This is now handled by demo-auth.ts for consistency
+  if (typeof window !== 'undefined') {
+    try {
+      const { getRecipeSaveCount: getCount } = require('./demo-auth');
+      return getCount(recipeId);
+    } catch {
+      // Fallback to local data if demo-auth not available
+      return recipeSaves.filter((save) => save.recipe_id === recipeId).length;
+    }
+  }
   return recipeSaves.filter((save) => save.recipe_id === recipeId).length;
 };
 
@@ -404,12 +414,34 @@ export const getRecipesByAuthor = (authorId: string): DemoRecipe[] => {
 
 // Helper function to get saved recipes for a user
 export const getSavedRecipesForUser = (userId: string): DemoRecipe[] => {
+  // Use demo-auth for consistency
+  if (typeof window !== 'undefined') {
+    try {
+      const { getSavedRecipeIdsForDemoUser } = require('./demo-auth');
+      const savedRecipeIds = getSavedRecipeIdsForDemoUser(userId);
+      return recipes.filter((recipe) => savedRecipeIds.includes(recipe.id) && recipe.is_published);
+    } catch {
+      // Fallback to local data
+      const savedRecipeIds = recipeSaves.filter((save) => save.user_id === userId).map((save) => save.recipe_id);
+      return recipes.filter((recipe) => savedRecipeIds.includes(recipe.id) && recipe.is_published);
+    }
+  }
   const savedRecipeIds = recipeSaves.filter((save) => save.user_id === userId).map((save) => save.recipe_id);
   return recipes.filter((recipe) => savedRecipeIds.includes(recipe.id) && recipe.is_published);
 };
 
 // Helper function to check if recipe is saved by user
 export const isRecipeSavedByUser = (recipeId: number, userId: string): boolean => {
+  // Use demo-auth for consistency
+  if (typeof window !== 'undefined') {
+    try {
+      const { isRecipeSavedByDemoUser } = require('./demo-auth');
+      return isRecipeSavedByDemoUser(userId, recipeId);
+    } catch {
+      // Fallback to local data
+      return recipeSaves.some((save) => save.recipe_id === recipeId && save.user_id === userId);
+    }
+  }
   return recipeSaves.some((save) => save.recipe_id === recipeId && save.user_id === userId);
 };
 

@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { getDemoSession, signOutDemoUser } from '@/lib/demo-auth';
 import type { User } from '@supabase/supabase-js';
 
 interface UserInfo {
@@ -19,6 +21,44 @@ export const UserMenu = () => {
 	const [isOpen, setIsOpen] = useState(false);
 
 	useEffect(() => {
+		if (!USE_SUPABASE) {
+			// Use demo auth
+			let mounted = true;
+			
+			const loadDemoUser = () => {
+				if (!mounted) return;
+				const demoUser = getDemoSession();
+				if (demoUser) {
+					setUser({
+						id: demoUser.id,
+						email: demoUser.email,
+						username: demoUser.username ?? undefined,
+						fullName: demoUser.full_name ?? undefined,
+						avatarUrl: demoUser.avatar_url,
+					});
+				} else {
+					setUser(null);
+				}
+			};
+			
+			loadDemoUser();
+			
+			// Listen for storage changes
+			const handleStorageChange = () => {
+				loadDemoUser();
+			};
+			window.addEventListener('storage', handleStorageChange);
+			
+			// Check periodically for same-tab changes
+			const interval = setInterval(loadDemoUser, 1000);
+			
+			return () => {
+				mounted = false;
+				window.removeEventListener('storage', handleStorageChange);
+				clearInterval(interval);
+			};
+		}
+
 		const supabase = createClient();
 		let mounted = true;
 
@@ -92,6 +132,14 @@ export const UserMenu = () => {
 	}, [isOpen]);
 
 	const handleSignOut = async () => {
+		if (!USE_SUPABASE) {
+			signOutDemoUser();
+			setUser(null);
+			setIsOpen(false);
+			window.location.reload();
+			return;
+		}
+		
 		const supabase = createClient();
 		await supabase.auth.signOut();
 		setUser(null);

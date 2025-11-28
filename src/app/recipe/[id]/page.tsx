@@ -7,6 +7,7 @@ import { SaveRecipeToggle } from '@/components/save-recipe-toggle';
 import { DeleteRecipeButton } from './delete-button';
 import { USE_SUPABASE } from '@/lib/data-config';
 import { fetchRecipeById, checkRecipeSaved } from '@/lib/data-service';
+import { getDemoSession, isRecipeSavedByDemoUser, getRecipeSaveCount } from '@/lib/demo-auth';
 
 type RecipeDetailRow = {
 	id: number;
@@ -70,7 +71,17 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 
 	let user = null;
 	let isSaved = false;
-	if (USE_SUPABASE && supabase) {
+	let wishlistCount = recipe.recipe_saves?.[0]?.count ?? 0;
+	
+	if (!USE_SUPABASE) {
+		// Use demo auth
+		const demoUser = getDemoSession();
+		if (demoUser) {
+			user = { id: demoUser.id } as any;
+			isSaved = isRecipeSavedByDemoUser(demoUser.id, recipeId);
+			wishlistCount = getRecipeSaveCount(recipeId);
+		}
+	} else if (supabase) {
 		const {
 			data: { user: authUser },
 		} = await supabase.auth.getUser();
@@ -82,7 +93,6 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 		}
 	}
 
-	const wishlistCount = recipe.recipe_saves?.[0]?.count ?? 0;
 	const profile = recipe.profiles;
 	const authorName = profile?.full_name || profile?.username || 'Unknown cook';
 	const isOwner = user?.id && recipe.author_id === user.id;
