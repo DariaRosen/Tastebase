@@ -141,19 +141,20 @@ export function WishlistToggle({
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-3">
         <form action={handleToggle} className="flex items-center gap-2">
-			<button
-				type="submit"
-				className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary transition hover:bg-brand-primary/20 disabled:opacity-60"
-				disabled={isLoading}
-				aria-label={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}
-			>
-				<Heart
-					className="h-5 w-5"
-					fill={isSaved ? '#f57402' : 'transparent'}
-					strokeWidth={isSaved ? 1.5 : 2}
-					color={isSaved ? '#f57402' : 'currentColor'}
-				/>
-			</button>
+          <button
+            type="submit"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-brand-primary/10 text-brand-primary transition hover:bg-brand-primary/20 disabled:opacity-60"
+            disabled={isLoading}
+            aria-label={isSaved ? 'Remove from wishlist' : 'Add to wishlist'}
+          >
+            <Heart
+              className="h-5 w-5"
+              fill={isSaved ? '#f57402' : 'transparent'}
+              strokeWidth={isSaved ? 1.5 : 2}
+              color={isSaved ? '#f57402' : 'currentColor'}
+            />
+          </button>
+        </form>
         <span className="text-sm text-gray-600">
           {count} save{count === 1 ? "" : "s"}
         </span>
