@@ -29,8 +29,6 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 	const action = updateRecipeAction.bind(null, initial.id, initial.heroImageUrl);
 	const [state, formAction, isPending] = useActionState(action, initialState);
 
-	const [title, setTitle] = useState<string>(initial.title);
-	const [description, setDescription] = useState<string>(initial.description);
 	const [ingredients, setIngredients] = useState<string[]>(initial.ingredients.length > 0 ? initial.ingredients : ['']);
 	const [steps, setSteps] = useState<string[]>(initial.steps.length > 0 ? initial.steps : ['']);
 	const [difficulty, setDifficulty] = useState<string>(initial.difficulty ?? 'Easy');
@@ -125,8 +123,8 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 					<input
 						id="title"
 						name="title"
-						value={title}
-						onChange={(event) => setTitle(event.target.value)}
+						value={state.title}
+						onChange={(event) => state.title = event.target.value}
 						required
 						minLength={3}
 						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
@@ -146,8 +144,8 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 				<textarea
 					id="description"
 					name="description"
-					value={description}
-					onChange={(event) => setDescription(event.target.value)}
+					value={state.description}
+					onChange={(event) => state.description = event.target.value}
 					required
 					rows={4}
 					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
