@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
@@ -30,6 +30,7 @@ export const ProfileForm = ({
 	const [avatarFile, setAvatarFile] = useState<File | null>(null);
 	const [isSaving, setIsSaving] = useState(false);
 	const [status, setStatus] = useState<Status>({ type: 'idle' });
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	// Load demo user data if not using Supabase
 	useEffect(() => {
@@ -73,9 +74,25 @@ export const ProfileForm = ({
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
 		if (!file) return;
+		// Clean up previous blob URL if it exists
+		if (avatarPreview && avatarPreview.startsWith('blob:')) {
+			URL.revokeObjectURL(avatarPreview);
+		}
 		setAvatarFile(file);
 		const previewUrl = URL.createObjectURL(file);
 		setAvatarPreview(previewUrl);
+	};
+
+	const handleRemoveImage = () => {
+		// Clean up blob URL if it exists
+		if (avatarPreview && avatarPreview.startsWith('blob:')) {
+			URL.revokeObjectURL(avatarPreview);
+		}
+		setAvatarFile(null);
+		setAvatarPreview(initialAvatarUrl ?? null);
+		if (fileInputRef.current) {
+			fileInputRef.current.value = '';
+		}
 	};
 
 	const handleSubmit = async (event: React.FormEvent) => {
@@ -108,6 +125,7 @@ export const ProfileForm = ({
 
 					const { url } = await uploadResponse.json();
 					avatarUrl = url;
+					setAvatarPreview(url); // Update preview to show uploaded image
 				}
 
 				const updated = updateDemoUser(demoUser.id, {
@@ -153,6 +171,7 @@ export const ProfileForm = ({
 				}
 				const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path);
 				avatarUrl = publicUrlData.publicUrl;
+				setAvatarPreview(avatarUrl); // Update preview to show uploaded image
 			}
 
 			const profilePayload = {
@@ -196,25 +215,46 @@ export const ProfileForm = ({
 
 	return (
 		<form onSubmit={handleSubmit} className="space-y-6">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-				<div className="relative h-24 w-24 overflow-hidden rounded-full bg-gray-200">
+			<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+				<div className="relative h-24 w-24 overflow-hidden rounded-full bg-gray-200 flex-shrink-0">
 					{avatarPreview ? (
 						<Image src={avatarPreview} alt="Avatar preview" fill className="object-cover" />
 					) : (
 						<div className="flex h-full w-full items-center justify-center text-3xl">👩‍🍳</div>
 					)}
 				</div>
-				<label className="flex flex-col text-sm text-gray-700">
-					<span className="font-medium">Avatar</span>
-					<input
-						type="file"
-						accept="image/*"
-						onChange={handleFileChange}
-						className="mt-1 text-sm text-gray-600"
-						aria-label="Upload avatar"
-					/>
-					<span className="text-xs text-gray-500">Use square JPG/PNG under 5MB for best results.</span>
-				</label>
+				<div className="flex-1">
+					<label className="flex flex-col text-sm text-gray-700">
+						<span className="font-medium">Avatar</span>
+						<div className="mt-1 flex flex-col gap-2">
+							<div className="flex items-center gap-2">
+								<input
+									ref={fileInputRef}
+									type="file"
+									accept="image/*"
+									onChange={handleFileChange}
+									className="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-primary file:text-white hover:file:bg-brand-primary-hover"
+									aria-label="Upload avatar"
+								/>
+								{avatarFile && (
+									<button
+										type="button"
+										onClick={handleRemoveImage}
+										className="text-sm font-medium text-red-600 hover:underline"
+									>
+										Remove
+									</button>
+								)}
+							</div>
+							{avatarFile && (
+								<span className="text-sm font-semibold text-brand-primary">
+									Selected: {avatarFile.name}
+								</span>
+							)}
+						</div>
+						<span className="mt-1 text-xs text-gray-500">Use square JPG/PNG under 5MB for best results.</span>
+					</label>
+				</div>
 			</div>
 
 			<div className="grid gap-4 md:grid-cols-2">
