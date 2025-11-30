@@ -1,7 +1,8 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { updateRecipeAction, type UpdateRecipeState } from './actions';
 
 interface EditRecipeFormProps {
@@ -32,6 +33,9 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 	const [ingredients, setIngredients] = useState<string[]>(initial.ingredients.length > 0 ? initial.ingredients : ['']);
 	const [steps, setSteps] = useState<string[]>(initial.steps.length > 0 ? initial.steps : ['']);
 	const [difficulty, setDifficulty] = useState<string>(initial.difficulty ?? 'Easy');
+	const [heroImageFile, setHeroImageFile] = useState<File | null>(null);
+	const [heroImagePreview, setHeroImagePreview] = useState<string | null>(initial.heroImageUrl ?? null);
+	const heroImageInputRef = useRef<HTMLInputElement>(null);
 
 	const handleIngredientChange = (index: number, value: string) => {
 		setIngredients((prev) => {
@@ -113,6 +117,30 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 		router.push(state.redirectTo);
 	}, [state.redirectTo, router]);
 
+	const handleHeroImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+		const file = event.target.files?.[0];
+		if (!file) return;
+		// Clean up previous blob URL if it exists
+		if (heroImagePreview && heroImagePreview.startsWith('blob:')) {
+			URL.revokeObjectURL(heroImagePreview);
+		}
+		setHeroImageFile(file);
+		const previewUrl = URL.createObjectURL(file);
+		setHeroImagePreview(previewUrl);
+	};
+
+	const handleRemoveHeroImage = () => {
+		// Clean up blob URL if it exists
+		if (heroImagePreview && heroImagePreview.startsWith('blob:')) {
+			URL.revokeObjectURL(heroImagePreview);
+		}
+		setHeroImageFile(null);
+		setHeroImagePreview(initial.heroImageUrl ?? null);
+		if (heroImageInputRef.current) {
+			heroImageInputRef.current.value = '';
+		}
+	};
+
 	return (
 		<form action={formAction} className="space-y-6">
 			<input type="hidden" name="existingHeroImageUrl" value={initial.heroImageUrl ?? ''} />
@@ -132,10 +160,48 @@ export const EditRecipeForm = ({ initial }: EditRecipeFormProps) => {
 					/>
 					{state.errors?.title && <span id="title-error" className="mt-1 text-xs text-red-600">{state.errors.title}</span>}
 				</label>
-				<label className="flex flex-col text-sm text-gray-700">
+				<label className="flex flex-col text-sm text-gray-700 w-full">
 					<span className="font-medium">Hero image</span>
-					<input name="heroImage" type="file" accept="image/*" className="mt-1 text-sm text-gray-600" />
-					<span className="mt-1 text-xs text-gray-500">Upload a new image to replace the existing one (optional).</span>
+					<div className="mt-1 flex flex-wrap items-start gap-4 w-full">
+						<div className="flex-1 min-w-0">
+							<div className="flex flex-wrap items-center gap-2">
+								<input
+									ref={heroImageInputRef}
+									name="heroImage"
+									type="file"
+									accept="image/*"
+									onChange={handleHeroImageChange}
+									className="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-primary file:text-white hover:file:bg-brand-primary-hover"
+								/>
+								{heroImageFile && (
+									<button
+										type="button"
+										onClick={handleRemoveHeroImage}
+										className="text-sm font-medium text-red-600 hover:underline whitespace-nowrap"
+									>
+										Remove
+									</button>
+								)}
+							</div>
+							{heroImageFile && (
+								<span className="mt-1 block text-sm font-semibold text-brand-primary">
+									Selected: {heroImageFile.name}
+								</span>
+							)}
+							<span className="mt-1 text-xs text-gray-500">Upload a new image to replace the existing one (optional).</span>
+						</div>
+						{heroImagePreview && (
+							<div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg border border-border-subtle bg-gray-100">
+								<Image
+									src={heroImagePreview}
+									alt="Hero image preview"
+									fill
+									className="object-cover"
+									sizes="80px"
+								/>
+							</div>
+						)}
+					</div>
 				</label>
 			</div>
 
