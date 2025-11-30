@@ -278,3 +278,137 @@ export const getRecipeSaveCount = (recipeId: number): number => {
   return saves.filter((s) => s.recipe_id === recipeId).length;
 };
 
+// Recipe management for demo mode
+const DEMO_RECIPES_KEY = 'tastebase-demo-recipes';
+
+export interface DemoRecipeData {
+  id: number;
+  author_id: string;
+  title: string;
+  description: string | null;
+  hero_image_url: string | null;
+  servings: number | null;
+  prep_minutes: number | null;
+  cook_minutes: number | null;
+  tags: string[] | null;
+  difficulty: string | null;
+  published_at: string;
+  is_published: boolean;
+  created_at: string;
+  recipe_ingredients: Array<{
+    position: number;
+    quantity: string | null;
+    name: string;
+  }>;
+  recipe_steps: Array<{
+    position: number;
+    instruction: string;
+  }>;
+}
+
+const getDemoRecipes = (): DemoRecipeData[] => {
+  if (typeof window === 'undefined') {
+    // On server, return empty array - recipes should be loaded from demo-data.ts
+    return [];
+  }
+  try {
+    const stored = localStorage.getItem(DEMO_RECIPES_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveDemoRecipes = (recipes: DemoRecipeData[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(DEMO_RECIPES_KEY, JSON.stringify(recipes));
+  } catch {
+    // Ignore localStorage errors
+  }
+};
+
+// Create a new recipe in demo mode
+export const createDemoRecipe = (recipe: Omit<DemoRecipeData, 'id' | 'created_at' | 'published_at'>): DemoRecipeData | null => {
+  try {
+    const recipes = getDemoRecipes();
+    
+    // Get the highest ID from existing recipes (including demo-data.ts)
+    const existingIds = recipes.map((r) => r.id);
+    // Start from 100 to avoid conflicts with demo-data.ts recipes (1-6)
+    const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 100;
+    const newId = maxId + 1;
+
+    const newRecipe: DemoRecipeData = {
+      ...recipe,
+      id: newId,
+      created_at: new Date().toISOString(),
+      published_at: recipe.is_published ? new Date().toISOString() : new Date().toISOString(),
+    };
+
+    recipes.push(newRecipe);
+    saveDemoRecipes(recipes);
+    return newRecipe;
+  } catch {
+    return null;
+  }
+};
+
+// Update a recipe in demo mode
+export const updateDemoRecipe = (recipeId: number, updates: Partial<Omit<DemoRecipeData, 'id' | 'author_id' | 'created_at'>>): DemoRecipeData | null => {
+  try {
+    const recipes = getDemoRecipes();
+    const recipeIndex = recipes.findIndex((r) => r.id === recipeId);
+    
+    if (recipeIndex === -1) return null;
+
+    recipes[recipeIndex] = {
+      ...recipes[recipeIndex],
+      ...updates,
+    };
+
+    saveDemoRecipes(recipes);
+    return recipes[recipeIndex];
+  } catch {
+    return null;
+  }
+};
+
+// Get a recipe by ID (checks both localStorage and demo-data.ts)
+export const getDemoRecipeById = (id: number): DemoRecipeData | null => {
+  // First check localStorage
+  const recipes = getDemoRecipes();
+  const recipe = recipes.find((r) => r.id === id);
+  if (recipe) return recipe;
+
+  // Fallback to demo-data.ts if available
+  if (typeof window !== 'undefined') {
+    try {
+      const { getRecipeById } = require('./demo-data');
+      return getRecipeById(id) as DemoRecipeData | null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+};
+
+// Get all published recipes (combines localStorage and demo-data.ts)
+export const getAllPublishedDemoRecipes = (): DemoRecipeData[] => {
+  const localRecipes = getDemoRecipes().filter((r) => r.is_published);
+  
+  // Also include recipes from demo-data.ts
+  if (typeof window !== 'undefined') {
+    try {
+      const { getPublishedRecipes } = require('./demo-data');
+      const demoDataRecipes = getPublishedRecipes();
+      // Combine and sort by published_at
+      const all = [...demoDataRecipes, ...localRecipes];
+      return all.sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
+    } catch {
+      return localRecipes;
+    }
+  }
+  return localRecipes;
+};
+

@@ -4,6 +4,8 @@ import { useActionState, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createRecipeAction, type CreateRecipeState } from './actions';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { getDemoSession } from '@/lib/demo-auth';
 
 const initialState: CreateRecipeState = {};
 const difficultyOptions = ['Easy', 'Intermediate', 'Advanced'] as const;
@@ -131,8 +133,111 @@ export const CreateRecipeForm = () => {
 		}
 	};
 
+	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+		e.preventDefault();
+		
+		// Handle demo mode separately
+		if (!USE_SUPABASE) {
+			const demoUser = getDemoSession();
+			if (!demoUser) {
+				alert('You must be signed in to create a recipe.');
+				return;
+			}
+
+			// Get form data
+			const formData = new FormData(e.currentTarget);
+			const title = formData.get('title')?.toString().trim() ?? '';
+			const description = formData.get('description')?.toString().trim() ?? '';
+			const servings = Number(formData.get('servings'));
+			const prepMinutes = Number(formData.get('prepMinutes'));
+			const cookMinutes = Number(formData.get('cookMinutes'));
+			const tags = formData.get('tags')?.toString() ?? '';
+			const difficulty = difficultyOptions.find((d) => d === formData.get('difficulty')) || 'Easy';
+			
+			// Validate
+			if (!title || !description || !servings || prepMinutes === null || cookMinutes === null) {
+				alert('Please fill in all required fields.');
+				return;
+			}
+
+			const ingredientValues = ingredients.filter(Boolean);
+			const stepValues = steps.filter(Boolean);
+
+			if (ingredientValues.length === 0) {
+				alert('Add at least one ingredient.');
+				return;
+			}
+
+			if (stepValues.length === 0) {
+				alert('Add at least one step.');
+				return;
+			}
+
+			// Upload hero image if provided
+			let heroImageUrl: string | null = null;
+			if (heroImageFile) {
+				try {
+					const uploadFormData = new FormData();
+					uploadFormData.append('file', heroImageFile);
+					uploadFormData.append('folder', 'Tastebase/recipes');
+
+					const uploadResponse = await fetch('/api/upload-image', {
+						method: 'POST',
+						body: uploadFormData,
+					});
+
+					if (uploadResponse.ok) {
+						const { url } = await uploadResponse.json();
+						heroImageUrl = url;
+					}
+				} catch (error) {
+					console.error('Image upload error:', error);
+				}
+			}
+
+			// Create recipe via API
+			try {
+				const response = await fetch('/api/create-recipe-demo', {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+					},
+					body: JSON.stringify({
+						title,
+						description,
+						servings,
+						prepMinutes,
+						cookMinutes,
+						tags,
+						difficulty,
+						heroImageUrl,
+						ingredients: ingredientValues,
+						steps: stepValues,
+					}),
+				});
+
+				const data = await response.json();
+
+				if (!response.ok) {
+					alert(data.error || 'Failed to create recipe.');
+					return;
+				}
+
+				// Success - redirect to home
+				router.push('/');
+			} catch (error) {
+				console.error('Recipe creation error:', error);
+				alert('Failed to create recipe. Please try again.');
+			}
+			return;
+		}
+
+		// Use server action for Supabase mode
+		formAction(new FormData(e.currentTarget));
+	};
+
 	return (
-		<form action={formAction} className="space-y-8">
+		<form onSubmit={handleSubmit} className="space-y-8">
 			<input type="hidden" name="heroImageUrl" value={state.heroImageUrl ?? ''} />
 			<div className="grid gap-6 md:grid-cols-2">
 				<label className="flex flex-col text-sm text-gray-700">
