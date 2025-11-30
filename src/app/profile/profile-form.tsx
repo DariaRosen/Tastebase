@@ -44,7 +44,11 @@ export const ProfileForm = ({
 				setUsername(demoUser.username ?? '');
 				setFullName(demoUser.full_name ?? '');
 				setBio(demoUser.bio ?? '');
-				setAvatarPreview(demoUser.avatar_url);
+				// Only update avatar preview if no file is currently selected
+				// This prevents overwriting the blob URL preview when user selects a file
+				if (!avatarFile) {
+					setAvatarPreview(demoUser.avatar_url);
+				}
 			};
 
 			loadDemoUser();
@@ -69,7 +73,7 @@ export const ProfileForm = ({
 			setBio(initialBio ?? '');
 			setAvatarPreview(initialAvatarUrl ?? null);
 		}
-	}, [router, initialUsername, initialFullName, initialBio, initialAvatarUrl]);
+	}, [router, initialUsername, initialFullName, initialBio, initialAvatarUrl, avatarFile]);
 
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
