@@ -354,14 +354,6 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
             {mode === 'login' ? 'Create account' : 'Have an account? Log in'}
           </button>
         </div>
-        {!USE_SUPABASE && (
-          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
-            <p className="font-medium">Demo Mode Active</p>
-            <p className="mt-1 text-xs">
-              Using local demo authentication. Your account will be stored in browser storage.
-            </p>
-          </div>
-        )}
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'signup' && (
             <label className="block">

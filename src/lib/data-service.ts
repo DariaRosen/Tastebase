@@ -210,16 +210,7 @@ export const fetchPublishedRecipes = async (
         return { data: null, error: new Error(error.message) };
       }
 
-      // Transform the data to match RecipeRow type
-      // Supabase returns profiles as an array, but we need a single object or null
-      const transformedData: RecipeRow[] = (data ?? []).map((row: any) => ({
-        ...row,
-        profiles: Array.isArray(row.profiles) && row.profiles.length > 0 
-          ? row.profiles[0] 
-          : null,
-      }));
-
-      return { data: transformedData, error: null };
+      return { data: data as RecipeRow[], error: null };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error : new Error('Unknown error') };
     }
@@ -294,18 +285,7 @@ export const fetchRecipeById = async (
         return { data: null, error: new Error(error.message) };
       }
 
-      // Transform profiles from array to single object or null
-      if (data) {
-        const transformed: RecipeDetailRow = {
-          ...data,
-          profiles: Array.isArray(data.profiles) && data.profiles.length > 0 
-            ? data.profiles[0] 
-            : null,
-        };
-        return { data: transformed, error: null };
-      }
-
-      return { data: null, error: null };
+      return { data, error: null };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error : new Error('Unknown error') };
     }
@@ -380,13 +360,7 @@ export const searchRecipesData = async (
         return { data: null, error: new Error(baseError?.message ?? ingredientError?.message ?? 'Search failed') };
       }
 
-      // Transform profiles from array to single object or null
-      const baseRecipes: RecipeRow[] = (baseData ?? []).map((row: any) => ({
-        ...row,
-        profiles: Array.isArray(row.profiles) && row.profiles.length > 0 
-          ? row.profiles[0] 
-          : null,
-      }));
+      const baseRecipes = (baseData ?? []) as RecipeRow[];
       const ingredientRecipeIds = new Set((ingredientRows ?? []).map((row: { recipe_id: number }) => row.recipe_id));
 
       const { data: ingredientRecipesData, error: ingredientRecipesError } = await supabase
@@ -423,13 +397,7 @@ export const searchRecipesData = async (
         return { data: null, error: new Error(ingredientRecipesError.message) };
       }
 
-      // Transform profiles from array to single object or null
-      const ingredientRecipes: RecipeRow[] = (ingredientRecipesData ?? []).map((row: any) => ({
-        ...row,
-        profiles: Array.isArray(row.profiles) && row.profiles.length > 0 
-          ? row.profiles[0] 
-          : null,
-      }));
+      const ingredientRecipes = (ingredientRecipesData ?? []) as RecipeRow[];
       const combinedRecipes = [...baseRecipes, ...ingredientRecipes].sort((first, second) => {
         const firstPublished = first.published_at ?? '';
         const secondPublished = second.published_at ?? '';
@@ -488,15 +456,7 @@ export const fetchRecipesByAuthor = async (
         return { data: null, error: new Error(error.message) };
       }
 
-      // Transform profiles from array to single object or null
-      const transformedData: RecipeRow[] = (data ?? []).map((row: any) => ({
-        ...row,
-        profiles: Array.isArray(row.profiles) && row.profiles.length > 0 
-          ? row.profiles[0] 
-          : null,
-      }));
-
-      return { data: transformedData, error: null };
+      return { data: data as RecipeRow[], error: null };
     } catch (error) {
       return { data: null, error: error instanceof Error ? error : new Error('Unknown error') };
     }
@@ -547,17 +507,8 @@ export const fetchSavedRecipes = async (
         return { data: null, error: new Error(error.message) };
       }
 
-      // Transform profiles from array to single object or null
-      const mapped: RecipeRow[] = ((data ?? []) as Array<{ recipe_id: number; recipes: any | null }>)
-        .map((row) => {
-          if (!row.recipes) return null;
-          return {
-            ...row.recipes,
-            profiles: Array.isArray(row.recipes.profiles) && row.recipes.profiles.length > 0 
-              ? row.recipes.profiles[0] 
-              : null,
-          };
-        })
+      const mapped = ((data ?? []) as Array<{ recipe_id: number; recipes: RecipeRow | null }>)
+        .map((row) => row.recipes)
         .filter((recipe): recipe is RecipeRow => Boolean(recipe));
 
       return { data: mapped, error: null };
