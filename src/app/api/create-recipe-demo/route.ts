@@ -1,15 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getDemoSession, createDemoRecipe, type DemoRecipeData } from '@/lib/demo-auth';
+import { cookies } from 'next/headers';
+import { createDemoRecipe, type DemoRecipeData } from '@/lib/demo-auth';
+
+// Helper to get demo user from cookies (since API routes run on server)
+async function getDemoUserFromCookies() {
+  const cookieStore = await cookies();
+  const demoAuthCookie = cookieStore.get('tastebase-demo-auth');
+  
+  if (!demoAuthCookie) return null;
+  
+  try {
+    const userId = JSON.parse(demoAuthCookie.value);
+    // Get users from localStorage is not available on server, so we need to get it from cookies or request
+    // For now, we'll get the user ID from the cookie and validate it in the request body
+    return userId;
+  } catch {
+    return null;
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    // Get demo user session
-    const demoUser = getDemoSession();
-    if (!demoUser) {
+    const body = await request.json();
+    const { userId, ...recipeData } = body;
+    
+    // Validate user ID is provided
+    if (!userId) {
       return NextResponse.json({ error: 'You must be signed in to create a recipe.' }, { status: 401 });
     }
 
-    const body = await request.json();
     const {
       title,
       description,
@@ -21,7 +40,7 @@ export async function POST(request: NextRequest) {
       heroImageUrl,
       ingredients,
       steps,
-    } = body;
+    } = recipeData;
 
     // Validate required fields
     if (!title || !description || !servings || prepMinutes === null || cookMinutes === null) {
@@ -68,8 +87,8 @@ export async function POST(request: NextRequest) {
     }));
 
     // Create recipe
-    const recipeData: Omit<DemoRecipeData, 'id' | 'created_at' | 'published_at'> = {
-      author_id: demoUser.id,
+    const recipePayload: Omit<DemoRecipeData, 'id' | 'created_at' | 'published_at'> = {
+      author_id: userId,
       title: title.trim(),
       description: description.trim() || null,
       hero_image_url: heroImageUrl || null,
@@ -83,7 +102,7 @@ export async function POST(request: NextRequest) {
       recipe_steps: stepRows,
     };
 
-    const newRecipe = createDemoRecipe(recipeData);
+    const newRecipe = createDemoRecipe(recipePayload);
 
     if (!newRecipe) {
       return NextResponse.json({ error: 'Failed to create recipe.' }, { status: 500 });

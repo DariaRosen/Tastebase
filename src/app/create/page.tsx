@@ -1,7 +1,59 @@
+'use client';
+
 import { CreateRecipeForm } from './create-form';
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { getDemoSession } from '@/lib/demo-auth';
 
 export default function CreateRecipePage() {
+	const router = useRouter();
+	const [isChecking, setIsChecking] = useState(true);
+	const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+	useEffect(() => {
+		const checkAuth = async () => {
+			if (!USE_SUPABASE) {
+				// Check demo auth
+				const demoUser = getDemoSession();
+				if (!demoUser) {
+					router.push('/');
+					return;
+				}
+				setIsAuthenticated(true);
+				setIsChecking(false);
+			} else {
+				// Check Supabase auth
+				const supabase = createClient();
+				const {
+					data: { user },
+				} = await supabase.auth.getUser();
+				if (!user) {
+					router.push('/');
+					return;
+				}
+				setIsAuthenticated(true);
+				setIsChecking(false);
+			}
+		};
+
+		checkAuth();
+	}, [router]);
+
+	if (isChecking) {
+		return (
+			<div className="flex min-h-screen items-center justify-center bg-brand-cream-soft">
+				<p className="text-gray-600">Loading...</p>
+			</div>
+		);
+	}
+
+	if (!isAuthenticated) {
+		return null;
+	}
+
 	return (
 		<div className="min-h-screen bg-brand-cream-soft">
 			<div className="flex justify-end px-4 pt-10">

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createRecipeAction, type CreateRecipeState } from './actions';
 import { USE_SUPABASE } from '@/lib/data-config';
-import { getDemoSession } from '@/lib/demo-auth';
+import { getDemoSession, createDemoRecipe, type DemoRecipeData } from '@/lib/demo-auth';
 
 const initialState: CreateRecipeState = {};
 const difficultyOptions = ['Easy', 'Intermediate', 'Advanced'] as const;
@@ -140,7 +140,8 @@ export const CreateRecipeForm = () => {
 		if (!USE_SUPABASE) {
 			const demoUser = getDemoSession();
 			if (!demoUser) {
-				alert('You must be signed in to create a recipe.');
+				// Should not happen since page checks auth, but redirect to be safe
+				router.push('/');
 				return;
 			}
 
@@ -195,31 +196,56 @@ export const CreateRecipeForm = () => {
 				}
 			}
 
-			// Create recipe via API
+			// Parse ingredients
+			const ingredientRows = ingredientValues.map((line, index) => {
+				const match = line.match(/^([0-9/.\s]+)\s+(.*)$/);
+				if (!match) {
+					return {
+						position: index,
+						quantity: null,
+						name: line,
+					};
+				}
+				const [_, quantity, name] = match;
+				return {
+					position: index,
+					quantity: quantity.trim(),
+					name: name.trim(),
+				};
+			});
+
+			// Parse steps
+			const stepRows = stepValues.map((instruction, index) => ({
+				position: index,
+				instruction,
+			}));
+
+			const tagArray = tags
+				.split(',')
+				.map((tag) => tag.trim())
+				.filter(Boolean);
+
+			// Create recipe directly (client-side since demo mode uses localStorage)
 			try {
-				const response = await fetch('/api/create-recipe-demo', {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-					},
-					body: JSON.stringify({
-						title,
-						description,
-						servings,
-						prepMinutes,
-						cookMinutes,
-						tags,
-						difficulty,
-						heroImageUrl,
-						ingredients: ingredientValues,
-						steps: stepValues,
-					}),
-				});
+				const recipeData: Omit<DemoRecipeData, 'id' | 'created_at' | 'published_at'> = {
+					author_id: demoUser.id,
+					title: title.trim(),
+					description: description.trim() || null,
+					hero_image_url: heroImageUrl,
+					servings,
+					prep_minutes: prepMinutes,
+					cook_minutes: cookMinutes,
+					tags: tagArray.length > 0 ? tagArray : null,
+					difficulty: difficulty || null,
+					is_published: true,
+					recipe_ingredients: ingredientRows,
+					recipe_steps: stepRows,
+				};
 
-				const data = await response.json();
+				const newRecipe = createDemoRecipe(recipeData);
 
-				if (!response.ok) {
-					alert(data.error || 'Failed to create recipe.');
+				if (!newRecipe) {
+					alert('Failed to create recipe. Please try again.');
 					return;
 				}
 
