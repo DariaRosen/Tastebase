@@ -4,6 +4,8 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { Buffer } from 'buffer';
 import { createServerSupabase } from '@/lib/supabaseServer';
+import { USE_SUPABASE } from '@/lib/data-config';
+import { getDemoSession } from '@/lib/demo-auth';
 
 export interface CreateRecipeState {
 	errors?: Record<string, string>;
@@ -63,6 +65,13 @@ export async function createRecipeAction(
 	}
 
 	try {
+		// Demo mode is handled client-side in the form component
+		// This server action only handles Supabase mode
+		if (!USE_SUPABASE) {
+			return { message: 'Demo mode recipe creation is handled client-side.' };
+		}
+
+		// Use Supabase
 		const supabase = await createServerSupabase({ shouldSetCookies: true });
 		const {
 			data: { user },
