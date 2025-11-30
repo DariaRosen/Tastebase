@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { config } from 'dotenv';
+import { resolve } from 'path';
+
+// Manually load environment variables (workaround for Turbopack issue)
+config({ path: resolve(process.cwd(), '.env.local') });
+config({ path: resolve(process.cwd(), '.env') });
 
 export async function POST(request: NextRequest) {
   try {
