@@ -354,6 +354,30 @@ export const createDemoRecipe = (recipe: Omit<DemoRecipeData, 'id' | 'created_at
   }
 };
 
+// Delete a recipe in demo mode (and remove related wishlist entries)
+export const deleteDemoRecipe = (recipeId: number, authorId: string): boolean => {
+  try {
+    const recipes = getDemoRecipes();
+    const existing = recipes.find((recipe) => recipe.id === recipeId);
+
+    if (!existing || existing.author_id !== authorId) {
+      return false;
+    }
+
+    const remainingRecipes = recipes.filter((recipe) => recipe.id !== recipeId);
+    saveDemoRecipes(remainingRecipes);
+
+    // Also remove any wishlist saves for this recipe
+    const saves = getDemoRecipeSaves();
+    const remainingSaves = saves.filter((save) => save.recipe_id !== recipeId);
+    saveDemoRecipeSaves(remainingSaves);
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 // Update a recipe in demo mode
 export const updateDemoRecipe = (recipeId: number, updates: Partial<Omit<DemoRecipeData, 'id' | 'author_id' | 'created_at'>>): DemoRecipeData | null => {
   try {
