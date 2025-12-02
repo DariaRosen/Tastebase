@@ -22,14 +22,18 @@ export async function GET() {
     const mongoUrlFromEnv = process.env.MONGO_URL;
     const dbNameFromEnv = process.env.DB_NAME;
     
-    // Parse file content to find MONGO_URL
+    // Parse file content to find MONGO_URL (handle both \n and \r\n)
     let mongoUrlInFile = null;
+    let dbNameInFile = null;
     if (fileContent) {
-      const lines = fileContent.split('\n');
+      const lines = fileContent.split(/\r?\n/);
       for (const line of lines) {
-        if (line.trim().startsWith('MONGO_URL=')) {
-          mongoUrlInFile = line.split('=')[1]?.trim();
-          break;
+        const trimmed = line.trim();
+        if (trimmed.startsWith('MONGO_URL=')) {
+          mongoUrlInFile = trimmed.split('=')[1]?.trim();
+        }
+        if (trimmed.startsWith('DB_NAME=')) {
+          dbNameInFile = trimmed.split('=')[1]?.trim();
         }
       }
     }
@@ -42,6 +46,8 @@ export async function GET() {
         hasContent: fileContent.length > 0,
         contentLength: fileContent.length,
         mongoUrlInFile: mongoUrlInFile ? `${mongoUrlInFile.substring(0, 30)}...` : 'NOT FOUND',
+        dbNameInFile: dbNameInFile || 'NOT FOUND',
+        allLines: fileContent.split(/\r?\n/).length,
       },
       processEnv: {
         MONGO_URL: mongoUrlFromEnv ? `${mongoUrlFromEnv.substring(0, 30)}...` : 'NOT SET',
