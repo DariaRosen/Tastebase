@@ -187,6 +187,22 @@ export const updateDemoUser = (
   }
 };
 
+// Get a lightweight profile shape for a demo user by ID
+export const getDemoUserProfileById = (
+  userId: string,
+): { full_name: string | null; username: string | null; avatar_url: string | null } | null => {
+  const users = getDemoUsers();
+  const user = users.find((demoUser) => demoUser.id === userId);
+  if (!user) {
+    return null;
+  }
+  return {
+    full_name: user.full_name,
+    username: user.username,
+    avatar_url: user.avatar_url,
+  };
+};
+
 // Recipe saves (wishlist) management
 const DEMO_RECIPE_SAVES_KEY = 'tastebase-demo-recipe-saves';
 
