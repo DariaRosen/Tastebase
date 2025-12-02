@@ -180,7 +180,7 @@ export const CreateRecipeForm = () => {
 				try {
 					const uploadFormData = new FormData();
 					uploadFormData.append('file', heroImageFile);
-					uploadFormData.append('folder', 'Tastebase/recipes');
+					uploadFormData.append('folder', 'Tastebase/recipe-images');
 
 					const uploadResponse = await fetch('/api/upload-image', {
 						method: 'POST',
@@ -190,9 +190,14 @@ export const CreateRecipeForm = () => {
 					if (uploadResponse.ok) {
 						const { url } = await uploadResponse.json();
 						heroImageUrl = url;
+					} else {
+						const errorData = await uploadResponse.json().catch(() => ({ error: 'Unknown error' }));
+						console.error('Image upload error:', errorData.error);
+						// Continue without image - recipe can be created without hero image
 					}
 				} catch (error) {
 					console.error('Image upload error:', error);
+					// Continue without image - recipe can be created without hero image
 				}
 			}
 

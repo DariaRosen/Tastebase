@@ -35,36 +35,46 @@ export const ProfileForm = ({
 	// Load demo user data if not using Supabase
 	useEffect(() => {
 		if (!USE_SUPABASE) {
-			const loadDemoUser = () => {
-				const demoUser = getDemoSession();
-				if (!demoUser) {
-					router.push('/');
-					return;
-				}
-				setUsername(demoUser.username ?? '');
-				setFullName(demoUser.full_name ?? '');
-				setBio(demoUser.bio ?? '');
-				// Only update avatar preview if no file is currently selected
-				// This prevents overwriting the blob URL preview when user selects a file
-				if (!avatarFile) {
-					setAvatarPreview(demoUser.avatar_url);
-				}
-			};
-
-			loadDemoUser();
+			const demoUser = getDemoSession();
+			if (!demoUser) {
+				router.push('/');
+				return;
+			}
+			// Only set initial values on mount, don't overwrite user input
+			setUsername(demoUser.username ?? '');
+			setFullName(demoUser.full_name ?? '');
+			setBio(demoUser.bio ?? '');
+			setAvatarPreview(demoUser.avatar_url);
 
 			// Listen for storage changes (e.g., profile updated in another tab)
+			// Only update if user hasn't made changes to avoid overwriting input
 			const handleStorageChange = () => {
-				loadDemoUser();
+				const updatedUser = getDemoSession();
+				if (updatedUser) {
+					// Only update if the values in storage are different from current state
+					// This prevents overwriting user input while typing
+					setUsername((prev) => {
+						const newValue = updatedUser.username ?? '';
+						return prev === newValue ? prev : newValue;
+					});
+					setFullName((prev) => {
+						const newValue = updatedUser.full_name ?? '';
+						return prev === newValue ? prev : newValue;
+					});
+					setBio((prev) => {
+						const newValue = updatedUser.bio ?? '';
+						return prev === newValue ? prev : newValue;
+					});
+					// Only update avatar preview if no file is currently selected
+					if (!avatarFile) {
+						setAvatarPreview(updatedUser.avatar_url);
+					}
+				}
 			};
 			window.addEventListener('storage', handleStorageChange);
-			
-			// Also check periodically for same-tab updates
-			const interval = setInterval(loadDemoUser, 500);
 
 			return () => {
 				window.removeEventListener('storage', handleStorageChange);
-				clearInterval(interval);
 			};
 		} else {
 			// Only use initial props if we're using Supabase
@@ -73,7 +83,8 @@ export const ProfileForm = ({
 			setBio(initialBio ?? '');
 			setAvatarPreview(initialAvatarUrl ?? null);
 		}
-	}, [router, initialUsername, initialFullName, initialBio, initialAvatarUrl, avatarFile]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [router]); // Only run on mount and when router changes
 
 	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
 		const file = event.target.files?.[0];
