@@ -4,6 +4,8 @@ import { notFound, redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabaseServer';
 import { Header } from '@/components/header';
 import { EditRecipeForm } from './edit-form';
+import { DemoEditRecipeClient } from './demo-edit-recipe-client';
+import { USE_SUPABASE } from '@/lib/data-config';
 
 type RecipeRow = {
 	id: number;
@@ -45,6 +47,11 @@ export default async function EditRecipePage({ params }: EditRecipePageProps) {
 	const recipeId = Number(resolvedParams.id);
 	if (Number.isNaN(recipeId)) {
 		notFound();
+	}
+
+	if (!USE_SUPABASE) {
+		// In demo mode we use a client-side edit flow backed by demo-auth (localStorage)
+		return <DemoEditRecipeClient recipeId={recipeId} />;
 	}
 
 	const supabase = await createServerSupabase();
