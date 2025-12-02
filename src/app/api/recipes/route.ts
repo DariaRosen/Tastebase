@@ -15,17 +15,25 @@ export async function GET(request: NextRequest) {
     });
 
     if (error) {
+      console.error('[Recipes API] Error from fetchPublishedRecipes:', error);
+      console.error('[Recipes API] Error stack:', error.stack);
       return NextResponse.json(
-        { error: error.message },
+        { error: error.message, details: process.env.NODE_ENV === 'development' ? error.stack : undefined },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ data });
   } catch (error) {
-    console.error('[Recipes API] Error:', error);
+    console.error('[Recipes API] Unexpected error:', error);
+    if (error instanceof Error) {
+      console.error('[Recipes API] Error stack:', error.stack);
+    }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to fetch recipes' },
+      { 
+        error: error instanceof Error ? error.message : 'Failed to fetch recipes',
+        details: process.env.NODE_ENV === 'development' ? (error instanceof Error ? error.stack : String(error)) : undefined
+      },
       { status: 500 }
     );
   }
