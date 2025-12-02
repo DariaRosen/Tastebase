@@ -29,11 +29,19 @@ export async function GET() {
       const lines = fileContent.split(/\r?\n/);
       for (const line of lines) {
         const trimmed = line.trim();
+        // Handle MONGO_URL=value format
         if (trimmed.startsWith('MONGO_URL=')) {
-          mongoUrlInFile = trimmed.split('=')[1]?.trim();
+          const parts = trimmed.split('=');
+          if (parts.length >= 2) {
+            mongoUrlInFile = parts.slice(1).join('=').trim(); // Join in case = is in the value
+          }
         }
+        // Handle DB_NAME=value format
         if (trimmed.startsWith('DB_NAME=')) {
-          dbNameInFile = trimmed.split('=')[1]?.trim();
+          const parts = trimmed.split('=');
+          if (parts.length >= 2) {
+            dbNameInFile = parts.slice(1).join('=').trim();
+          }
         }
       }
     }
