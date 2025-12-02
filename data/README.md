@@ -29,7 +29,7 @@ You can generate bcrypt hashes using:
 #### Using MongoDB Compass:
 1. Open MongoDB Compass
 2. Connect to your database
-3. Select your database (e.g., "Tastbase")
+3. Select your database (e.g., "Tastebase")
 4. For each collection:
    - Click "Add Data" → "Import File"
    - Select the JSON file
@@ -39,13 +39,13 @@ You can generate bcrypt hashes using:
 #### Using MongoDB Shell (mongosh):
 ```bash
 # Import users
-mongoimport --uri="mongodb+srv://username:password@cluster.mongodb.net/Tastbase" --collection=users --file=seed-users.json --jsonArray
+mongoimport --uri="mongodb+srv://username:password@cluster.mongodb.net/Tastebase" --collection=users --file=seed-users.json --jsonArray
 
 # Import recipes
-mongoimport --uri="mongodb+srv://username:password@cluster.mongodb.net/Tastbase" --collection=recipes --file=seed-recipes.json --jsonArray
+mongoimport --uri="mongodb+srv://username:password@cluster.mongodb.net/Tastebase" --collection=recipes --file=seed-recipes.json --jsonArray
 
 # Import recipe saves
-mongoimport --uri="mongodb+srv://username:password@cluster.mongodb.net/Tastbase" --collection=recipesaves --file=seed-recipe-saves.json --jsonArray
+mongoimport --uri="mongodb+srv://username:password@cluster.mongodb.net/Tastebase" --collection=recipesaves --file=seed-recipe-saves.json --jsonArray
 ```
 
 #### Using MongoDB Atlas:

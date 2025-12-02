@@ -24,7 +24,7 @@ Your application needs **3 collections** in MongoDB:
 Mongoose will **automatically create collections** when you first insert data! You don't need to manually create them.
 
 Just make sure:
-1. Your database name matches `DB_NAME` in `.env.local` (default: "Tastbase")
+1. Your database name matches `DB_NAME` in `.env.local` (default: "Tastebase")
 2. The collections will be created when the app runs
 
 ### Option 2: Create manually (optional)
@@ -32,7 +32,7 @@ If you want to create them manually in MongoDB Atlas:
 
 1. Go to your cluster → "Browse Collections"
 2. Click "Create Database"
-3. Database name: `Tastbase` (or your `DB_NAME`)
+3. Database name: `Tastebase` (or your `DB_NAME`)
 4. Create these collections:
    - `users` ✅ (already exists)
    - `recipes`
