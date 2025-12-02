@@ -15,7 +15,7 @@ The password `Daria13579` is visible in commit `de42c86` (now `e5a25bf` after hi
 5. Update your `.env.local` file:
    ```
    MONGO_URL=mongodb+srv://DariaRosen:YOUR_NEW_PASSWORD@cluster0.3prj10p.mongodb.net/
-   DB_NAME=Tastbase
+   DB_NAME=Tastebase
    ```
 
 ### 2. Remove Credentials from GitHub History

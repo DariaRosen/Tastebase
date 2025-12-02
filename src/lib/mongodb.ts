@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const getMongoUri = () => {
   const dbURL = process.env.MONGO_URL;
-  const dbName = process.env.DB_NAME || 'Tastbase';
+  const dbName = process.env.DB_NAME || 'Tastebase';
   
   if (!dbURL) {
     throw new Error('Please define the MONGO_URL environment variable inside .env.local');

@@ -13,7 +13,7 @@ export async function GET() {
     // Step 1: Check environment variables
     diagnostics.step = 'checking_env';
     const dbURL = process.env.MONGO_URL;
-    const dbName = process.env.DB_NAME || 'Tastbase';
+    const dbName = process.env.DB_NAME || 'Tastebase';
     
     diagnostics.env = {
       MONGO_URL_set: !!dbURL,
