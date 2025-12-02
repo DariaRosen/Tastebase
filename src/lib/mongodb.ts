@@ -1,19 +1,7 @@
 import mongoose from 'mongoose';
 
-// Explicitly load .env.local if not already loaded (fallback for Next.js)
-if (typeof window === 'undefined' && !process.env.MONGO_URL) {
-  try {
-    const dotenv = require('dotenv');
-    const path = require('path');
-    dotenv.config({ path: path.join(process.cwd(), '.env.local') });
-  } catch (e) {
-    // dotenv might not be needed if Next.js loads it, but try anyway
-    console.warn('[MongoDB] Failed to load .env.local via dotenv:', e);
-  }
-}
-
 const getMongoUri = () => {
-  // Try to load .env.local if MONGO_URL is not set
+  // Try to load .env.local if MONGO_URL is not set (fallback for Next.js)
   if (!process.env.MONGO_URL && typeof window === 'undefined') {
     try {
       const dotenv = require('dotenv');
