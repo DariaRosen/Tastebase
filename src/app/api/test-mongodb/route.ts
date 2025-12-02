@@ -1,46 +1,29 @@
 import { NextResponse } from 'next/server';
-import connectDB from '@/lib/mongodb';
-import { Recipe } from '@/lib/models/Recipe';
-import { User } from '@/lib/models/User';
 
 export async function GET() {
   try {
-    // Test MongoDB connection
-    await connectDB();
+    const dbURL = process.env.MONGO_URL;
+    const dbName = process.env.DB_NAME || 'Tastbase';
     
-    // Test collections
-    const userCount = await User.countDocuments();
-    const recipeCount = await Recipe.countDocuments();
-    
-    // Try to fetch one recipe
-    const sampleRecipe = await Recipe.findOne({ is_published: true }).lean().exec();
+    // Test MongoDB connection string construction
+    const testUri = dbURL ? `${dbURL}${dbName}?retryWrites=true&w=majority` : 'NOT SET';
     
     return NextResponse.json({
       success: true,
-      connected: true,
-      counts: {
-        users: userCount,
-        recipes: recipeCount,
+      env: {
+        MONGO_URL_set: !!dbURL,
+        MONGO_URL_length: dbURL ? dbURL.length : 0,
+        DB_NAME: dbName,
+        constructed_uri_preview: dbURL ? `${dbURL.substring(0, 30)}...${dbName}` : 'NOT SET',
       },
-      sampleRecipe: sampleRecipe ? {
-        id: sampleRecipe._id,
-        title: sampleRecipe.title,
-        hasAuthor: !!sampleRecipe.author_id,
-      } : null,
-      collections: {
-        user: 'user',
-        recipe: 'recipe',
-        recipesave: 'recipesave',
-      },
+      connection_string_construction: testUri.substring(0, 50) + '...',
     });
   } catch (error) {
-    console.error('[Test MongoDB] Error:', error);
+    console.error('[Test MongoDB Config] Error:', error);
     return NextResponse.json({
       success: false,
-      connected: false,
       error: error instanceof Error ? error.message : 'Unknown error',
       stack: error instanceof Error ? error.stack : undefined,
     }, { status: 500 });
   }
 }
-

@@ -102,10 +102,21 @@ export const fetchPublishedRecipes = async (
       query.limit(options.limit);
     }
 
-    const recipes = await query
-      .populate('author_id', 'full_name username avatar_url')
-      .lean()
-      .exec();
+    let recipes: any[];
+    try {
+      recipes = await query
+        .populate('author_id', 'full_name username avatar_url')
+        .lean()
+        .exec();
+    } catch (queryError) {
+      console.error('[fetchPublishedRecipes] Query error:', queryError);
+      throw queryError;
+    }
+
+    if (!recipes || recipes.length === 0) {
+      console.log('[fetchPublishedRecipes] No recipes found');
+      return { data: [], error: null };
+    }
 
     // Get save counts for all recipes
     const recipeIds = recipes.map((r) => r._id);
