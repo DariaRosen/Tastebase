@@ -3,11 +3,12 @@ import mongoose from 'mongoose';
 // Explicitly load .env.local if not already loaded (fallback for Next.js)
 if (typeof window === 'undefined' && !process.env.MONGO_URL) {
   try {
-    const { config } = require('dotenv');
+    const dotenv = require('dotenv');
     const path = require('path');
-    config({ path: path.join(process.cwd(), '.env.local') });
+    dotenv.config({ path: path.join(process.cwd(), '.env.local') });
   } catch (e) {
     // dotenv might not be needed if Next.js loads it, but try anyway
+    console.warn('[MongoDB] Failed to load .env.local via dotenv:', e);
   }
 }
 
