@@ -92,7 +92,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[50] flex items-start justify-center bg-black/50 pt-20" style={{ top: '80px' }}>
+    <div className="fixed inset-0 z-[50] flex items-start justify-center pt-20" style={{ top: '80px' }}>
       <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl mt-8">
         <button
           onClick={handleClose}
