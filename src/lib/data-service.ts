@@ -75,8 +75,23 @@ export type RecipeDetailRow = {
   recipe_saves: { count: number | null }[] | null;
 };
 
+// Minimal shared recipe shape used for demo data (both static demo-data and dynamic demo-auth)
+interface BaseDemoRecipeForList {
+  id: number;
+  author_id: string;
+  title: string;
+  description: string | null;
+  hero_image_url: string | null;
+  servings: number | null;
+  prep_minutes: number | null;
+  cook_minutes: number | null;
+  tags: string[] | null;
+  difficulty: string | null;
+  published_at: string;
+}
+
 // Convert demo recipe to Supabase-like format
-export const convertDemoRecipeToRow = (recipe: DemoRecipe): RecipeRow => {
+export const convertDemoRecipeToRow = (recipe: BaseDemoRecipeForList): RecipeRow => {
   const profile = getProfileById(recipe.author_id);
   // Use demo-auth for save count if available
   let saveCount = 0;
@@ -216,8 +231,20 @@ export const fetchPublishedRecipes = async (
     }
   }
 
-  // Use local data
-  let recipes = getPublishedRecipes();
+  // Use local demo data (static + dynamic)
+  let recipes: BaseDemoRecipeForList[];
+  if (typeof window !== 'undefined') {
+    try {
+      const { getAllPublishedDemoRecipes } = require('./demo-auth') as {
+        getAllPublishedDemoRecipes: () => BaseDemoRecipeForList[];
+      };
+      recipes = getAllPublishedDemoRecipes();
+    } catch {
+      recipes = getPublishedRecipes();
+    }
+  } else {
+    recipes = getPublishedRecipes();
+  }
   if (options?.orderBy === 'published_at') {
     recipes = [...recipes].sort((a, b) => {
       const dateA = new Date(a.published_at).getTime();
@@ -291,7 +318,65 @@ export const fetchRecipeById = async (
     }
   }
 
-  // Use local data
+  // Use local demo data
+  // First, try dynamic demo recipes (including user-created) when running in the browser.
+  if (typeof window !== 'undefined') {
+    try {
+      // getDemoRecipeById already falls back to static demo-data recipes internally
+      const { getDemoRecipeById, getRecipeSaveCount: getDemoSaveCount } = require('./demo-auth') as {
+        getDemoRecipeById: (id: number) => DemoRecipe | null;
+        getRecipeSaveCount: (id: number) => number;
+      };
+      const demoRecipe = getDemoRecipeById(recipeId);
+      if (demoRecipe) {
+        const profile = getProfileById(demoRecipe.author_id);
+        const saveCount = getDemoSaveCount(demoRecipe.id);
+
+        const detailRow: RecipeDetailRow = {
+          id: demoRecipe.id,
+          author_id: demoRecipe.author_id,
+          title: demoRecipe.title,
+          description: demoRecipe.description,
+          hero_image_url: demoRecipe.hero_image_url,
+          servings: demoRecipe.servings,
+          prep_minutes: demoRecipe.prep_minutes,
+          cook_minutes: demoRecipe.cook_minutes,
+          tags: demoRecipe.tags,
+          difficulty: demoRecipe.difficulty,
+          published_at: demoRecipe.published_at,
+          profiles: profile
+            ? {
+                full_name: profile.full_name,
+                username: profile.username,
+                avatar_url: profile.avatar_url,
+              }
+            : null,
+          recipe_ingredients: demoRecipe.recipe_ingredients.map((ingredient) => ({
+            position: ingredient.position,
+            quantity: ingredient.quantity,
+            // Demo recipes created via demo-auth may not have unit/note – default to null
+            // Static demo-data recipes will include these fields.
+            // @ts-expect-error - unit and note may not exist on all demo recipe ingredient shapes
+            unit: ingredient.unit ?? null,
+            // @ts-expect-error - unit and note may not exist on all demo recipe ingredient shapes
+            note: ingredient.note ?? null,
+            name: ingredient.name,
+          })),
+          recipe_steps: demoRecipe.recipe_steps.map((step) => ({
+            position: step.position,
+            instruction: step.instruction,
+          })),
+          recipe_saves: [{ count: saveCount }],
+        };
+
+        return { data: detailRow, error: null };
+      }
+    } catch {
+      // Fall through to static demo data below
+    }
+  }
+
+  // Fallback to static demo-data recipes only
   const recipe = getRecipeById(recipeId);
   if (!recipe) {
     return { data: null, error: new Error('Recipe not found') };
@@ -414,6 +499,30 @@ export const searchRecipesData = async (
   }
 
   // Use local data
+  if (typeof window !== 'undefined') {
+    try {
+      const { getAllPublishedDemoRecipes } = require('./demo-auth') as {
+        getAllPublishedDemoRecipes: () => BaseDemoRecipeForList[];
+      };
+      const allRecipes = getAllPublishedDemoRecipes();
+      const lowerQuery = query.toLowerCase().trim();
+      const filtered =
+        lowerQuery.length === 0
+          ? allRecipes
+          : allRecipes.filter((recipe) => {
+              const matchesTitle = recipe.title.toLowerCase().includes(lowerQuery);
+              const matchesDescription = recipe.description?.toLowerCase().includes(lowerQuery) ?? false;
+              const matchesDifficulty = recipe.difficulty?.toLowerCase().includes(lowerQuery) ?? false;
+              const matchesTag =
+                recipe.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery)) ?? false;
+              return matchesTitle || matchesDescription || matchesDifficulty || matchesTag;
+            });
+      return { data: filtered.map(convertDemoRecipeToRow), error: null };
+    } catch {
+      // Fall back to original static search
+    }
+  }
+
   const recipes = searchRecipes(query);
   return { data: recipes.map(convertDemoRecipeToRow), error: null };
 };
@@ -463,6 +572,19 @@ export const fetchRecipesByAuthor = async (
   }
 
   // Use local data
+  if (typeof window !== 'undefined') {
+    try {
+      const { getAllPublishedDemoRecipes } = require('./demo-auth') as {
+        getAllPublishedDemoRecipes: () => BaseDemoRecipeForList[];
+      };
+      const allRecipes = getAllPublishedDemoRecipes();
+      const authored = allRecipes.filter((recipe) => recipe.author_id === authorId);
+      return { data: authored.map(convertDemoRecipeToRow), error: null };
+    } catch {
+      // Fall back to original static implementation
+    }
+  }
+
   const recipes = getRecipesByAuthor(authorId);
   return { data: recipes.map(convertDemoRecipeToRow), error: null };
 };
@@ -518,6 +640,24 @@ export const fetchSavedRecipes = async (
   }
 
   // Use local data
+  if (typeof window !== 'undefined') {
+    try {
+      const {
+        getSavedRecipeIdsForDemoUser,
+        getAllPublishedDemoRecipes,
+      } = require('./demo-auth') as {
+        getSavedRecipeIdsForDemoUser: (userId: string) => number[];
+        getAllPublishedDemoRecipes: () => BaseDemoRecipeForList[];
+      };
+      const savedIds = new Set(getSavedRecipeIdsForDemoUser(userId));
+      const allRecipes = getAllPublishedDemoRecipes();
+      const savedRecipes = allRecipes.filter((recipe) => savedIds.has(recipe.id));
+      return { data: savedRecipes.map(convertDemoRecipeToRow), error: null };
+    } catch {
+      // Fall back to original static implementation
+    }
+  }
+
   const recipes = getSavedRecipesForUser(userId);
   return { data: recipes.map(convertDemoRecipeToRow), error: null };
 };
