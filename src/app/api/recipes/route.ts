@@ -17,8 +17,14 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('[Recipes API] Error from fetchPublishedRecipes:', error);
       console.error('[Recipes API] Error stack:', error.stack);
+      console.error('[Recipes API] Error name:', error.name);
       return NextResponse.json(
-        { error: error.message, details: process.env.NODE_ENV === 'development' ? error.stack : undefined },
+        { 
+          error: error.message,
+          errorName: error.name,
+          details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+          message: `Failed to fetch recipes: ${error.message}`,
+        },
         { status: 500 }
       );
     }
