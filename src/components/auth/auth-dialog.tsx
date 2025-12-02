@@ -173,7 +173,7 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
           </button>
         </form>
 
-        <div className="mt-8 text-center text-sm text-gray-600">
+        <div className="mt-6 pt-6 text-center text-sm text-gray-600 border-t border-gray-200">
           {mode === 'login' ? (
             <>
               Don't have an account?{' '}
