@@ -5,9 +5,6 @@ import Image from 'next/image';
 import { Search, LogIn } from 'lucide-react';
 import { FormEvent, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
-import { USE_SUPABASE } from '@/lib/data-config';
-import { getDemoSession } from '@/lib/demo-auth';
 import { AuthDialog } from './auth/auth-dialog';
 import { UserMenu } from './auth/user-menu';
 
@@ -18,47 +15,22 @@ export const Header = () => {
   const router = useRouter();
 
   useEffect(() => {
-    if (!USE_SUPABASE) {
-      // Check demo auth
-      const demoUser = getDemoSession();
-      setIsLoggedIn(Boolean(demoUser));
-      
-      // Listen for storage changes (when user signs in/out in another tab)
-      const handleStorageChange = () => {
-        const user = getDemoSession();
-        setIsLoggedIn(Boolean(user));
-      };
-      window.addEventListener('storage', handleStorageChange);
-      // Also check periodically for same-tab changes
-      const interval = setInterval(() => {
-        const user = getDemoSession();
-        setIsLoggedIn(Boolean(user));
-      }, 1000);
-      
-      return () => {
-        window.removeEventListener('storage', handleStorageChange);
-        clearInterval(interval);
-      };
-    }
-
-    const supabase = createClient();
-    let mounted = true;
-
-    async function load() {
-      const { data } = await supabase.auth.getUser();
-      if (!mounted) return;
-      setIsLoggedIn(Boolean(data.user));
-    }
-    load();
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      setIsLoggedIn(Boolean(session?.user));
-    });
-
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        setIsLoggedIn(Boolean(data.user));
+      } catch {
+        setIsLoggedIn(false);
+      }
     };
+
+    checkSession();
+
+    // Check session periodically
+    const interval = setInterval(checkSession, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
@@ -157,4 +129,3 @@ export const Header = () => {
     </header>
   );
 };
-

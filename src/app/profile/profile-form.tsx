@@ -3,329 +3,210 @@
 import { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
-import { USE_SUPABASE } from '@/lib/data-config';
-import { getDemoSession, updateDemoUser } from '@/lib/demo-auth';
 
 interface ProfileFormProps {
-	initialUsername?: string | null;
-	initialFullName?: string | null;
-	initialBio?: string | null;
-	initialAvatarUrl?: string | null;
+  initialUsername?: string | null;
+  initialFullName?: string | null;
+  initialBio?: string | null;
+  initialAvatarUrl?: string | null;
 }
 
 type Status = { type: 'idle' } | { type: 'success'; message: string } | { type: 'error'; message: string };
 
 export const ProfileForm = ({
-	initialUsername,
-	initialFullName,
-	initialBio,
-	initialAvatarUrl,
+  initialUsername,
+  initialFullName,
+  initialBio,
+  initialAvatarUrl,
 }: ProfileFormProps) => {
-	const router = useRouter();
-	const [username, setUsername] = useState(initialUsername ?? '');
-	const [fullName, setFullName] = useState(initialFullName ?? '');
-	const [bio, setBio] = useState(initialBio ?? '');
-	const [avatarPreview, setAvatarPreview] = useState<string | null>(initialAvatarUrl ?? null);
-	const [avatarFile, setAvatarFile] = useState<File | null>(null);
-	const [isSaving, setIsSaving] = useState(false);
-	const [status, setStatus] = useState<Status>({ type: 'idle' });
-	const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const [username, setUsername] = useState(initialUsername ?? '');
+  const [fullName, setFullName] = useState(initialFullName ?? '');
+  const [bio, setBio] = useState(initialBio ?? '');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(initialAvatarUrl ?? null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [status, setStatus] = useState<Status>({ type: 'idle' });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-	// Load demo user data if not using Supabase
-	useEffect(() => {
-		if (!USE_SUPABASE) {
-			const demoUser = getDemoSession();
-			if (!demoUser) {
-				router.push('/');
-				return;
-			}
-			// Only set initial values on mount, don't overwrite user input
-			setUsername(demoUser.username ?? '');
-			setFullName(demoUser.full_name ?? '');
-			setBio(demoUser.bio ?? '');
-			setAvatarPreview(demoUser.avatar_url);
+  useEffect(() => {
+    setUsername(initialUsername ?? '');
+    setFullName(initialFullName ?? '');
+    setBio(initialBio ?? '');
+    setAvatarPreview(initialAvatarUrl ?? null);
+  }, [initialUsername, initialFullName, initialBio, initialAvatarUrl]);
 
-			// Listen for storage changes (e.g., profile updated in another tab)
-			// Only update if user hasn't made changes to avoid overwriting input
-			const handleStorageChange = () => {
-				const updatedUser = getDemoSession();
-				if (updatedUser) {
-					// Only update if the values in storage are different from current state
-					// This prevents overwriting user input while typing
-					setUsername((prev) => {
-						const newValue = updatedUser.username ?? '';
-						return prev === newValue ? prev : newValue;
-					});
-					setFullName((prev) => {
-						const newValue = updatedUser.full_name ?? '';
-						return prev === newValue ? prev : newValue;
-					});
-					setBio((prev) => {
-						const newValue = updatedUser.bio ?? '';
-						return prev === newValue ? prev : newValue;
-					});
-					// Only update avatar preview if no file is currently selected
-					if (!avatarFile) {
-						setAvatarPreview(updatedUser.avatar_url);
-					}
-				}
-			};
-			window.addEventListener('storage', handleStorageChange);
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    // Clean up previous blob URL if it exists
+    if (avatarPreview && avatarPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+    setAvatarFile(file);
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
+  };
 
-			return () => {
-				window.removeEventListener('storage', handleStorageChange);
-			};
-		} else {
-			// Only use initial props if we're using Supabase
-			setUsername(initialUsername ?? '');
-			setFullName(initialFullName ?? '');
-			setBio(initialBio ?? '');
-			setAvatarPreview(initialAvatarUrl ?? null);
-		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [router]); // Only run on mount and when router changes
+  const handleRemoveImage = () => {
+    // Clean up blob URL if it exists
+    if (avatarPreview && avatarPreview.startsWith('blob:')) {
+      URL.revokeObjectURL(avatarPreview);
+    }
+    setAvatarFile(null);
+    setAvatarPreview(initialAvatarUrl ?? null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
-	const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-		const file = event.target.files?.[0];
-		if (!file) return;
-		// Clean up previous blob URL if it exists
-		if (avatarPreview && avatarPreview.startsWith('blob:')) {
-			URL.revokeObjectURL(avatarPreview);
-		}
-		setAvatarFile(file);
-		const previewUrl = URL.createObjectURL(file);
-		setAvatarPreview(previewUrl);
-	};
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setIsSaving(true);
+    setStatus({ type: 'idle' });
+    try {
+      // Upload avatar to Cloudinary if a new file was selected
+      let avatarUrl = initialAvatarUrl ?? null;
+      if (avatarFile) {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', avatarFile);
 
-	const handleRemoveImage = () => {
-		// Clean up blob URL if it exists
-		if (avatarPreview && avatarPreview.startsWith('blob:')) {
-			URL.revokeObjectURL(avatarPreview);
-		}
-		setAvatarFile(null);
-		setAvatarPreview(initialAvatarUrl ?? null);
-		if (fileInputRef.current) {
-			fileInputRef.current.value = '';
-		}
-	};
+        const uploadResponse = await fetch('/api/upload-avatar', {
+          method: 'POST',
+          body: uploadFormData,
+        });
 
-	const handleSubmit = async (event: React.FormEvent) => {
-		event.preventDefault();
-		setIsSaving(true);
-		setStatus({ type: 'idle' });
-		try {
-			if (!USE_SUPABASE) {
-				// Use demo auth
-				const demoUser = getDemoSession();
-				if (!demoUser) {
-					throw new Error('You must be signed in to update your profile.');
-				}
+        if (!uploadResponse.ok) {
+          const errorData = await uploadResponse.json();
+          throw new Error(errorData.error || 'Failed to upload avatar image.');
+        }
 
-				// Upload avatar to Cloudinary if a new file was selected
-				let avatarUrl = avatarPreview;
-				if (avatarFile) {
-					const uploadFormData = new FormData();
-					uploadFormData.append('file', avatarFile);
+        const { url } = await uploadResponse.json();
+        avatarUrl = url;
+        setAvatarPreview(url); // Update preview to show uploaded image
+      }
 
-					const uploadResponse = await fetch('/api/upload-avatar', {
-						method: 'POST',
-						body: uploadFormData,
-					});
+      // Update profile via API
+      const updateResponse = await fetch('/api/profile/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: username || null,
+          full_name: fullName || null,
+          bio: bio || null,
+          avatar_url: avatarUrl,
+        }),
+      });
 
-					if (!uploadResponse.ok) {
-						const errorData = await uploadResponse.json();
-						throw new Error(errorData.error || 'Failed to upload avatar image.');
-					}
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        throw new Error(errorData.error || 'Failed to update profile.');
+      }
 
-					const { url } = await uploadResponse.json();
-					avatarUrl = url;
-					setAvatarPreview(url); // Update preview to show uploaded image
-				}
+      setStatus({ type: 'success', message: 'Profile updated successfully.' });
+      setAvatarFile(null);
 
-				const updated = updateDemoUser(demoUser.id, {
-					username: username || null,
-					full_name: fullName || null,
-					avatar_url: avatarUrl,
-					bio: bio || null,
-				});
+      setTimeout(() => {
+        router.refresh();
+        router.push('/');
+      }, 1000);
+    } catch (error) {
+      setStatus({
+        type: 'error',
+        message: error instanceof Error ? error.message : 'Failed to update profile.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
-				if (!updated) {
-					throw new Error('Failed to update profile.');
-				}
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        <div className="relative h-24 w-24 overflow-hidden rounded-full bg-gray-200 flex-shrink-0">
+          {avatarPreview ? (
+            <Image src={avatarPreview} alt="Avatar preview" fill className="object-cover" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-3xl">👩‍🍳</div>
+          )}
+        </div>
+        <div className="flex-1">
+          <label className="flex flex-col text-sm text-gray-700">
+            <span className="font-medium">Avatar</span>
+            <div className="mt-1 flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFileChange}
+                  className="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-primary file:text-white hover:file:bg-brand-primary-hover"
+                />
+                {avatarFile && (
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="text-sm font-medium text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              <span className="text-xs text-gray-500">Upload a JPG/PNG under 5MB. Optional.</span>
+            </div>
+          </label>
+        </div>
+      </div>
 
-				setStatus({ type: 'success', message: 'Profile updated successfully.' });
-				setAvatarFile(null);
+      <label className="flex flex-col text-sm text-gray-700">
+        <span className="font-medium">Username</span>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="cook123"
+          maxLength={32}
+          className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+        />
+        <span className="mt-1 text-xs text-gray-500">Lowercase letters, numbers, hyphens, and underscores only.</span>
+      </label>
 
-				setTimeout(() => {
-					router.push('/');
-				}, 1000);
-				return;
-			}
+      <label className="flex flex-col text-sm text-gray-700">
+        <span className="font-medium">Full name</span>
+        <input
+          type="text"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+          placeholder="Jane Doe"
+          className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+        />
+      </label>
 
-			// Use Supabase
-			const supabase = createClient();
-			const {
-				data: { user },
-				error: userError,
-			} = await supabase.auth.getUser();
-			if (userError || !user) {
-				throw new Error('You must be signed in to update your profile.');
-			}
+      <label className="flex flex-col text-sm text-gray-700">
+        <span className="font-medium">Bio</span>
+        <textarea
+          value={bio}
+          onChange={(e) => setBio(e.target.value)}
+          rows={4}
+          placeholder="Tell us about yourself..."
+          className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+        />
+      </label>
 
-			let avatarUrl = initialAvatarUrl ?? null;
-			if (avatarFile) {
-				const path = `${user.id}/${Date.now()}-${avatarFile.name}`;
-				const { error: uploadError } = await supabase.storage.from('avatars').upload(path, avatarFile, {
-					cacheControl: '3600',
-					upsert: true,
-					contentType: avatarFile.type,
-				});
-				if (uploadError) {
-					throw uploadError;
-				}
-				const { data: publicUrlData } = supabase.storage.from('avatars').getPublicUrl(path);
-				avatarUrl = publicUrlData.publicUrl;
-				setAvatarPreview(avatarUrl); // Update preview to show uploaded image
-			}
+      {status.type === 'success' && (
+        <div className="rounded-lg bg-green-50 p-3 text-sm text-green-600">{status.message}</div>
+      )}
+      {status.type === 'error' && (
+        <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{status.message}</div>
+      )}
 
-			const profilePayload = {
-				id: user.id,
-				username: username || null,
-				full_name: fullName || null,
-				bio: bio || null,
-				avatar_url: avatarUrl,
-			};
-
-			const { error: upsertError } = await supabase.from('profiles').upsert(profilePayload).select().single();
-			if (upsertError) {
-				throw upsertError;
-			}
-
-			await supabase.auth.updateUser({
-				data: {
-					username: username || null,
-					full_name: fullName || null,
-					avatar_url: avatarUrl,
-				},
-			});
-
-			setStatus({ type: 'success', message: 'Profile updated successfully.' });
-			setAvatarFile(null);
-
-			if (typeof window !== 'undefined') {
-				setTimeout(() => {
-					window.location.href = '/';
-				}, 1000);
-			}
-		} catch (error) {
-			setStatus({
-				type: 'error',
-				message: error instanceof Error ? error.message : 'Failed to update profile.',
-			});
-		} finally {
-			setIsSaving(false);
-		}
-	};
-
-	return (
-		<form onSubmit={handleSubmit} className="space-y-6">
-			<div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-				<div className="relative h-24 w-24 overflow-hidden rounded-full bg-gray-200 flex-shrink-0">
-					{avatarPreview ? (
-						<Image src={avatarPreview} alt="Avatar preview" fill className="object-cover" />
-					) : (
-						<div className="flex h-full w-full items-center justify-center text-3xl">👩‍🍳</div>
-					)}
-				</div>
-				<div className="flex-1">
-					<label className="flex flex-col text-sm text-gray-700">
-						<span className="font-medium">Avatar</span>
-						<div className="mt-1 flex flex-col gap-2">
-							<div className="flex items-center gap-2">
-								<input
-									ref={fileInputRef}
-									type="file"
-									accept="image/*"
-									onChange={handleFileChange}
-									className="text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-primary file:text-white hover:file:bg-brand-primary-hover"
-									aria-label="Upload avatar"
-								/>
-								{avatarFile && (
-									<button
-										type="button"
-										onClick={handleRemoveImage}
-										className="text-sm font-medium text-red-600 hover:underline"
-									>
-										Remove
-									</button>
-								)}
-							</div>
-							{avatarFile && (
-								<span className="text-sm font-semibold text-brand-primary">
-									Selected: {avatarFile.name}
-								</span>
-							)}
-						</div>
-						<span className="mt-1 text-xs text-gray-500">Use square JPG/PNG under 5MB for best results.</span>
-					</label>
-				</div>
-			</div>
-
-			<div className="grid gap-4 md:grid-cols-2">
-				<label className="flex flex-col text-sm text-gray-700">
-					<span className="font-medium">Username</span>
-					<input
-						id="username"
-						name="username"
-						value={username}
-						onChange={(event) => setUsername(event.target.value)}
-						placeholder="chef-amy"
-						required
-						minLength={3}
-						maxLength={32}
-						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-					/>
-				</label>
-				<label className="flex flex-col text-sm text-gray-700">
-					<span className="font-medium">Full name</span>
-					<input
-						id="fullName"
-						name="fullName"
-						value={fullName}
-						onChange={(event) => setFullName(event.target.value)}
-						placeholder="Amy Santiago"
-						className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-					/>
-				</label>
-			</div>
-
-			<label className="flex flex-col text-sm text-gray-700">
-				<span className="font-medium">Bio</span>
-				<textarea
-					id="bio"
-					name="bio"
-					value={bio}
-					onChange={(event) => setBio(event.target.value)}
-					placeholder="Short intro about you..."
-					rows={3}
-					className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-				/>
-			</label>
-
-			<button
-				type="submit"
-				disabled={isSaving}
-				className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:opacity-60"
-				aria-busy={isSaving}
-			>
-				{isSaving ? 'Saving…' : 'Save profile'}
-			</button>
-
-			{status.type === 'success' && <p className="text-sm text-green-600">{status.message}</p>}
-			{status.type === 'error' && <p className="text-sm text-red-600">{status.message}</p>}
-		</form>
-	);
+      <button
+        type="submit"
+        disabled={isSaving}
+        className="inline-flex items-center justify-center rounded-lg bg-brand-primary px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:opacity-60"
+      >
+        {isSaving ? 'Saving...' : 'Save changes'}
+      </button>
+    </form>
+  );
 };
-
-

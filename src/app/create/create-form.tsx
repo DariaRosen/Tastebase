@@ -4,8 +4,6 @@ import { useActionState, useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { createRecipeAction, type CreateRecipeState } from './actions';
-import { USE_SUPABASE } from '@/lib/data-config';
-import { getDemoSession, createDemoRecipe, type DemoRecipeData } from '@/lib/demo-auth';
 
 const initialState: CreateRecipeState = {};
 const difficultyOptions = ['Easy', 'Intermediate', 'Advanced'] as const;
@@ -136,134 +134,37 @@ export const CreateRecipeForm = () => {
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault();
 		
-		// Handle demo mode separately
-		if (!USE_SUPABASE) {
-			const demoUser = getDemoSession();
-			if (!demoUser) {
-				// Should not happen since page checks auth, but redirect to be safe
-				router.push('/');
-				return;
-			}
-
-			// Get form data
-			const formData = new FormData(e.currentTarget);
-			const title = formData.get('title')?.toString().trim() ?? '';
-			const description = formData.get('description')?.toString().trim() ?? '';
-			const servings = Number(formData.get('servings'));
-			const prepMinutes = Number(formData.get('prepMinutes'));
-			const cookMinutes = Number(formData.get('cookMinutes'));
-			const tags = formData.get('tags')?.toString() ?? '';
-			const difficulty = difficultyOptions.find((d) => d === formData.get('difficulty')) || 'Easy';
-			
-			// Validate
-			if (!title || !description || !servings || prepMinutes === null || cookMinutes === null) {
-				alert('Please fill in all required fields.');
-				return;
-			}
-
-			const ingredientValues = ingredients.filter(Boolean);
-			const stepValues = steps.filter(Boolean);
-
-			if (ingredientValues.length === 0) {
-				alert('Add at least one ingredient.');
-				return;
-			}
-
-			if (stepValues.length === 0) {
-				alert('Add at least one step.');
-				return;
-			}
-
-			// Upload hero image if provided
-			let heroImageUrl: string | null = null;
-			if (heroImageFile) {
-				try {
-					const uploadFormData = new FormData();
-					uploadFormData.append('file', heroImageFile);
-					uploadFormData.append('folder', 'Tastebase/recipe-images');
-
-					const uploadResponse = await fetch('/api/upload-image', {
-						method: 'POST',
-						body: uploadFormData,
-					});
-
-					if (uploadResponse.ok) {
-						const { url } = await uploadResponse.json();
-						heroImageUrl = url;
-					} else {
-						const errorData = await uploadResponse.json().catch(() => ({ error: 'Unknown error' }));
-						console.error('Image upload error:', errorData.error);
-						// Continue without image - recipe can be created without hero image
-					}
-				} catch (error) {
-					console.error('Image upload error:', error);
-					// Continue without image - recipe can be created without hero image
-				}
-			}
-
-			// Parse ingredients
-			const ingredientRows = ingredientValues.map((line, index) => {
-				const match = line.match(/^([0-9/.\s]+)\s+(.*)$/);
-				if (!match) {
-					return {
-						position: index,
-						quantity: null,
-						name: line,
-					};
-				}
-				const [_, quantity, name] = match;
-				return {
-					position: index,
-					quantity: quantity.trim(),
-					name: name.trim(),
-				};
-			});
-
-			// Parse steps
-			const stepRows = stepValues.map((instruction, index) => ({
-				position: index,
-				instruction,
-			}));
-
-			const tagArray = tags
-				.split(',')
-				.map((tag) => tag.trim())
-				.filter(Boolean);
-
-			// Create recipe directly (client-side since demo mode uses localStorage)
+		// Upload hero image first if provided
+		if (heroImageFile) {
 			try {
-				const recipeData: Omit<DemoRecipeData, 'id' | 'created_at' | 'published_at'> = {
-					author_id: demoUser.id,
-					title: title.trim(),
-					description: description.trim() || null,
-					hero_image_url: heroImageUrl,
-					servings,
-					prep_minutes: prepMinutes,
-					cook_minutes: cookMinutes,
-					tags: tagArray.length > 0 ? tagArray : null,
-					difficulty: difficulty || null,
-					is_published: true,
-					recipe_ingredients: ingredientRows,
-					recipe_steps: stepRows,
-				};
+				const uploadFormData = new FormData();
+				uploadFormData.append('file', heroImageFile);
+				uploadFormData.append('folder', 'Tastebase/recipe-images');
 
-				const newRecipe = createDemoRecipe(recipeData);
+				const uploadResponse = await fetch('/api/upload-image', {
+					method: 'POST',
+					body: uploadFormData,
+				});
 
-				if (!newRecipe) {
-					alert('Failed to create recipe. Please try again.');
+				if (uploadResponse.ok) {
+					const { url } = await uploadResponse.json();
+					// Add the image URL to the form data
+					const formData = new FormData(e.currentTarget);
+					formData.set('heroImageUrl', url);
+					formAction(formData);
+					return;
+				} else {
+					const errorData = await uploadResponse.json().catch(() => ({ error: 'Unknown error' }));
+					alert(errorData.error || 'Failed to upload image. Please try again.');
 					return;
 				}
-
-				// Success - redirect to home
-				router.push('/');
 			} catch (error) {
-				console.error('Recipe creation error:', error);
-				alert('Failed to create recipe. Please try again.');
+				console.error('Image upload error:', error);
+				alert('Failed to upload image. Please try again.');
+				return;
 			}
-			return;
 		}
 
-		// Use server action for Supabase mode
 		formAction(new FormData(e.currentTarget));
 	};
 

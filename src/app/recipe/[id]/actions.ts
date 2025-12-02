@@ -1,43 +1,39 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { createServerSupabase } from '@/lib/supabaseServer';
+import { getCurrentUser } from '@/lib/auth-service';
+import connectDB from '@/lib/mongodb';
+import { Recipe } from '@/lib/models/Recipe';
+import { RecipeSave } from '@/lib/models/RecipeSave';
+import { Types } from 'mongoose';
 
 export interface DeleteRecipeResult {
   success?: boolean;
   error?: string;
 }
 
-export async function deleteRecipeAction(recipeId: number): Promise<DeleteRecipeResult> {
+export async function deleteRecipeAction(recipeId: string): Promise<DeleteRecipeResult> {
   try {
-    const supabase = await createServerSupabase({ shouldSetCookies: true });
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
+    const user = await getCurrentUser();
     if (!user) {
       return { error: 'You must be signed in to delete a recipe.' };
     }
 
-    const { data: recipe, error: fetchError } = await supabase
-      .from('recipes')
-      .select('author_id')
-      .eq('id', recipeId)
-      .maybeSingle();
-
-    if (fetchError || !recipe) {
-      return { error: 'Recipe not found.' };
+    if (!Types.ObjectId.isValid(recipeId)) {
+      return { error: 'Invalid recipe ID.' };
     }
 
-    if (recipe.author_id !== user.id) {
-      return { error: 'You do not have permission to delete this recipe.' };
+    await connectDB();
+
+    const recipe = await Recipe.findOne({ _id: recipeId, author_id: user.id }).lean().exec();
+
+    if (!recipe) {
+      return { error: 'Recipe not found or you do not have permission to delete it.' };
     }
 
-    const { error: deleteError } = await supabase.from('recipes').delete().eq('id', recipeId);
-
-    if (deleteError) {
-      return { error: deleteError.message ?? 'Failed to delete recipe.' };
-    }
+    // Delete recipe and associated saves
+    await Recipe.deleteOne({ _id: recipeId });
+    await RecipeSave.deleteMany({ recipe_id: recipeId });
 
     revalidatePath('/');
     revalidatePath('/wishlist');

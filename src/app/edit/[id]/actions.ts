@@ -2,179 +2,159 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { Buffer } from 'buffer';
-import { createServerSupabase } from '@/lib/supabaseServer';
+import { getCurrentUser } from '@/lib/auth-service';
+import connectDB from '@/lib/mongodb';
+import { Recipe } from '@/lib/models/Recipe';
+import { Types } from 'mongoose';
 
 export interface UpdateRecipeState {
-	errors?: Record<string, string>;
-	message?: string;
-	redirectTo?: string;
+  errors?: Record<string, string>;
+  message?: string;
+  redirectTo?: string;
 }
 
 const parseNumber = (value: FormDataEntryValue | null) => {
-	if (!value) return null;
-	const parsed = Number(value);
-	return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  if (!value) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 };
 
 const allowedDifficulties = ['Easy', 'Intermediate', 'Advanced'] as const;
 
 export async function updateRecipeAction(
-	recipeId: number,
-	previousHeroImageUrl: string | null,
-	_prevState: UpdateRecipeState,
-	formData: FormData
+  recipeId: string,
+  previousHeroImageUrl: string | null,
+  _prevState: UpdateRecipeState,
+  formData: FormData
 ): Promise<UpdateRecipeState> {
-	const title = formData.get('title')?.toString().trim() ?? '';
-	const description = formData.get('description')?.toString().trim() ?? '';
-	const servings = parseNumber(formData.get('servings'));
-	const prepMinutes = parseNumber(formData.get('prepMinutes'));
-	const cookMinutes = parseNumber(formData.get('cookMinutes'));
-	const tagsInput = formData.get('tags')?.toString() ?? '';
-	const heroImageFile = formData.get('heroImage');
-	const difficultyRaw = formData.get('difficulty')?.toString().trim() ?? '';
-	const ingredientValues = formData
-		.getAll('ingredients[]')
-		.map((value) => value.toString().trim())
-		.filter(Boolean);
-	const stepValues = formData
-		.getAll('steps[]')
-		.map((value) => value.toString().trim())
-		.filter(Boolean);
+  const title = formData.get('title')?.toString().trim() ?? '';
+  const description = formData.get('description')?.toString().trim() ?? '';
+  const servings = parseNumber(formData.get('servings'));
+  const prepMinutes = parseNumber(formData.get('prepMinutes'));
+  const cookMinutes = parseNumber(formData.get('cookMinutes'));
+  const tagsInput = formData.get('tags')?.toString() ?? '';
+  const heroImageUrl = formData.get('heroImageUrl')?.toString() || previousHeroImageUrl || null;
+  const difficultyRaw = formData.get('difficulty')?.toString().trim() ?? '';
+  const ingredientValues = formData
+    .getAll('ingredients[]')
+    .map((value) => value.toString().trim())
+    .filter(Boolean);
+  const stepValues = formData
+    .getAll('steps[]')
+    .map((value) => value.toString().trim())
+    .filter(Boolean);
 
-	const errors: Record<string, string> = {};
-	if (!title) errors.title = 'Title is required.';
-	if (!description) errors.description = 'Description is required.';
-	if (!servings) errors.servings = 'Servings must be a positive number.';
-	if (!prepMinutes && prepMinutes !== 0) errors.prepMinutes = 'Prep minutes must be zero or more.';
-	if (!cookMinutes && cookMinutes !== 0) errors.cookMinutes = 'Cook minutes must be zero or more.';
-	if (ingredientValues.length === 0) errors.ingredients = 'Add at least one ingredient.';
-	if (stepValues.length === 0) errors.steps = 'Add at least one step.';
-	if (!allowedDifficulties.includes(difficultyRaw as typeof allowedDifficulties[number])) {
-		errors.difficulty = 'Select a difficulty level.';
-	}
+  const errors: Record<string, string> = {};
+  if (!title) errors.title = 'Title is required.';
+  if (!description) errors.description = 'Description is required.';
+  if (!servings) errors.servings = 'Servings must be a positive number.';
+  if (!prepMinutes && prepMinutes !== 0) errors.prepMinutes = 'Prep minutes must be zero or more.';
+  if (!cookMinutes && cookMinutes !== 0) errors.cookMinutes = 'Cook minutes must be zero or more.';
+  if (ingredientValues.length === 0) errors.ingredients = 'Add at least one ingredient.';
+  if (stepValues.length === 0) errors.steps = 'Add at least one step.';
+  if (!allowedDifficulties.includes(difficultyRaw as typeof allowedDifficulties[number])) {
+    errors.difficulty = 'Select a difficulty level.';
+  }
 
-	if (Object.keys(errors).length > 0) {
-		return { errors, message: 'Please fix the highlighted fields.' };
-	}
+  if (Object.keys(errors).length > 0) {
+    return { errors, message: 'Please fix the highlighted fields.' };
+  }
 
-	try {
-		const supabase = await createServerSupabase({ shouldSetCookies: true });
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-		if (!user) {
-			return { message: 'You must be signed in to update a recipe.' };
-		}
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      return { message: 'You must be signed in to update a recipe.' };
+    }
 
-		const { data: existingRecipe } = await supabase
-			.from('recipes')
-			.select('author_id, hero_image_url')
-			.eq('id', recipeId)
-			.maybeSingle();
+    if (!Types.ObjectId.isValid(recipeId)) {
+      return { message: 'Invalid recipe ID.' };
+    }
 
-		if (!existingRecipe || existingRecipe.author_id !== user.id) {
-			return { message: 'You do not have permission to edit this recipe.' };
-		}
+    await connectDB();
 
-		let heroImageUrl = previousHeroImageUrl ?? existingRecipe.hero_image_url ?? null;
-		if (heroImageFile instanceof File && heroImageFile.size > 0) {
-			if (!heroImageFile.type.startsWith('image/')) {
-				return { message: 'Uploaded file must be an image.' };
-			}
-			if (heroImageFile.size > 5 * 1024 * 1024) {
-				return { message: 'Image must be 5MB or smaller.' };
-			}
+    const existingRecipe = await Recipe.findOne({ _id: recipeId }).lean().exec();
 
-			const fileExt = heroImageFile.name.split('.').pop() ?? 'jpg';
-			const filePath = `${user.id}/${Date.now()}.${fileExt}`;
-			const arrayBuffer = await heroImageFile.arrayBuffer();
-			const { error: uploadError } = await supabase.storage
-				.from('recipe-images')
-				.upload(filePath, Buffer.from(arrayBuffer), {
-					cacheControl: '3600',
-					contentType: heroImageFile.type,
-					upsert: true,
-				});
-			if (uploadError) {
-				return { message: uploadError.message };
-			}
-			const { data: publicUrlData } = supabase.storage.from('recipe-images').getPublicUrl(filePath);
-			heroImageUrl = publicUrlData.publicUrl;
-		}
+    if (!existingRecipe || existingRecipe.author_id.toString() !== user.id) {
+      return { message: 'You do not have permission to edit this recipe.' };
+    }
 
-		const tagArray = tagsInput
-			.split(',')
-			.map((tag) => tag.trim())
-			.filter(Boolean);
+    // Parse ingredients
+    const ingredients = ingredientValues.map((ingredientStr, index) => {
+      const parts = ingredientStr.split(/\s+/);
+      let quantity: string | null = null;
+      let unit: string | null = null;
+      let name = ingredientStr;
+      let note: string | null = null;
 
-		const { error: recipeError } = await supabase
-			.from('recipes')
-			.update({
-				title,
-				description,
-				servings,
-				prep_minutes: prepMinutes,
-				cook_minutes: cookMinutes,
-				tags: tagArray,
-				hero_image_url: heroImageUrl,
-				difficulty: difficultyRaw,
-			})
-			.eq('id', recipeId);
+      // Try to parse quantity and unit from the beginning
+      if (parts.length >= 2) {
+        const firstPart = parts[0];
+        const secondPart = parts[1];
 
-		if (recipeError) {
-			return { message: recipeError.message ?? 'Failed to update recipe.' };
-		}
+        // Check if first part is a number
+        if (/^\d+([./]\d+)?$/.test(firstPart)) {
+          quantity = firstPart;
+          // Check if second part looks like a unit
+          if (/^(cup|cups|tbsp|tsp|oz|lb|g|kg|ml|l|piece|pieces|clove|cloves)$/i.test(secondPart)) {
+            unit = secondPart;
+            name = parts.slice(2).join(' ');
+          } else {
+            name = parts.slice(1).join(' ');
+          }
+        }
+      }
 
-		await supabase.from('recipe_ingredients').delete().eq('recipe_id', recipeId);
-		await supabase.from('recipe_steps').delete().eq('recipe_id', recipeId);
+      // Check for note (after dash or comma)
+      const noteMatch = name.match(/[–—,]\s*(.+)$/);
+      if (noteMatch) {
+        note = noteMatch[1].trim();
+        name = name.substring(0, noteMatch.index).trim();
+      }
 
-		if (ingredientValues.length > 0) {
-			const ingredientRows = ingredientValues.map((line, index) => {
-				const match = line.match(/^([0-9/.\s]+)\s+(.*)$/);
-				if (!match) {
-					return {
-						recipe_id: recipeId,
-						position: index,
-						name: line,
-					};
-				}
-				const [_, quantity, name] = match;
-				return {
-					recipe_id: recipeId,
-					position: index,
-					quantity: quantity.trim(),
-					name: name.trim(),
-				};
-			});
+      return {
+        position: index + 1,
+        quantity: quantity || null,
+        unit: unit || null,
+        name: name.trim() || ingredientStr,
+        note: note || null,
+      };
+    });
 
-			const { error: ingredientsError } = await supabase.from('recipe_ingredients').insert(ingredientRows);
-			if (ingredientsError) {
-				return { message: ingredientsError.message };
-			}
-		}
+    // Parse steps
+    const steps = stepValues.map((stepStr, index) => ({
+      position: index + 1,
+      instruction: stepStr,
+    }));
 
-		if (stepValues.length > 0) {
-			const stepRows = stepValues.map((instruction, index) => ({
-				recipe_id: recipeId,
-				position: index,
-				instruction,
-			}));
+    // Parse tags
+    const tags = tagsInput
+      .split(',')
+      .map((tag) => tag.trim())
+      .filter(Boolean);
 
-			const { error: stepsError } = await supabase.from('recipe_steps').insert(stepRows);
-			if (stepsError) {
-				return { message: stepsError.message };
-			}
-		}
+    // Update recipe
+    await Recipe.findByIdAndUpdate(recipeId, {
+      $set: {
+        title,
+        description: description || null,
+        servings: servings || null,
+        prep_minutes: prepMinutes || null,
+        cook_minutes: cookMinutes || null,
+        tags: tags.length > 0 ? tags : null,
+        hero_image_url: heroImageUrl,
+        difficulty: difficultyRaw as 'Easy' | 'Intermediate' | 'Advanced',
+        recipe_ingredients: ingredients,
+        recipe_steps: steps,
+      },
+    });
 
-		revalidatePath('/');
-		revalidatePath(`/recipe/${recipeId}`);
-		return { redirectTo: `/recipe/${recipeId}` };
-	} catch (error) {
-		return {
-			message: error instanceof Error ? error.message : 'Unexpected error updating recipe.',
-		};
-	}
+    revalidatePath('/');
+    revalidatePath(`/recipe/${recipeId}`);
+    revalidatePath('/my-recipes');
+    return { redirectTo: `/recipe/${recipeId}` };
+  } catch (error) {
+    return {
+      message: error instanceof Error ? error.message : 'Unexpected error updating recipe.',
+    };
+  }
 }
-
-

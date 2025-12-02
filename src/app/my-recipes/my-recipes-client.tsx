@@ -1,15 +1,11 @@
 'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/header';
 import { RecipeCard } from '@/components/recipe-card';
 import { DeleteRecipeButton } from '@/app/recipe/[id]/delete-button';
-import { createClient } from '@/lib/supabase';
-import { USE_SUPABASE } from '@/lib/data-config';
-import { fetchRecipesByAuthor, type RecipeRow } from '@/lib/data-service';
-import { getDemoSession, deleteDemoRecipe } from '@/lib/demo-auth';
-
+import type { RecipeRow } from '@/lib/data-service';
 
 type RecipeCardData = {
   id: string;
@@ -27,7 +23,6 @@ type RecipeCardData = {
 };
 
 export default function MyRecipesClient() {
-  const supabase = useMemo(() => (USE_SUPABASE ? createClient() : null), []);
   const [userId, setUserId] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<RecipeCardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,44 +30,21 @@ export default function MyRecipesClient() {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    if (!USE_SUPABASE) {
-      // Check demo auth
-      const demoUser = getDemoSession();
-      setUserId(demoUser?.id ?? null);
-      
-      // Listen for storage changes
-      const handleStorageChange = () => {
-        const user = getDemoSession();
-        setUserId(user?.id ?? null);
-      };
-      window.addEventListener('storage', handleStorageChange);
-      const interval = setInterval(() => {
-        const user = getDemoSession();
-        setUserId(user?.id ?? null);
-      }, 1000);
-      
-      return () => {
-        window.removeEventListener('storage', handleStorageChange);
-        clearInterval(interval);
-      };
-    }
-
-    if (!supabase) return;
-
-    let mounted = true;
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!mounted) return;
-      setUserId(data.user?.id ?? null);
-    })();
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id ?? null);
-    });
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        setUserId(data.user?.id ?? null);
+      } catch {
+        setUserId(null);
+      }
     };
-  }, [supabase]);
+
+    checkSession();
+    const interval = setInterval(checkSession, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -85,38 +57,45 @@ export default function MyRecipesClient() {
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await fetchRecipesByAuthor(supabase, userId);
+      try {
+        const response = await fetch('/api/recipes/my-recipes');
+        if (!response.ok) {
+          throw new Error('Failed to load recipes');
+        }
+        const { data } = await response.json();
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      if (fetchError) {
-        setError(fetchError.message ?? 'Failed to load your recipes.');
-        setRecipes([]);
-        setIsLoading(false);
-        return;
+        const mapped: RecipeCardData[] = ((data ?? []) as RecipeRow[]).map((recipe) => {
+          const profile = recipe.profiles;
+          const author = profile?.full_name || profile?.username || 'You';
+          return {
+            id: recipe.id.toString(),
+            title: recipe.title,
+            description: recipe.description ?? undefined,
+            imageUrl: recipe.hero_image_url ?? undefined,
+            authorName: author,
+            authorAvatar: profile?.avatar_url ?? undefined,
+            prepTime: recipe.prep_minutes ?? undefined,
+            cookTime: recipe.cook_minutes ?? undefined,
+            servings: recipe.servings ?? undefined,
+            wishlistCount: recipe.recipe_saves?.[0]?.count ?? undefined,
+            tags: recipe.tags ?? undefined,
+            difficulty: recipe.difficulty ?? undefined,
+          };
+        });
+
+        setRecipes(mapped);
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load your recipes.');
+          setRecipes([]);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
-
-      const mapped: RecipeCardData[] = ((data ?? []) as RecipeRow[]).map((recipe) => {
-        const profile = recipe.profiles;
-        const author = profile?.full_name || profile?.username || 'You';
-        return {
-          id: recipe.id.toString(),
-          title: recipe.title,
-          description: recipe.description ?? undefined,
-          imageUrl: recipe.hero_image_url ?? undefined,
-          authorName: author,
-          authorAvatar: profile?.avatar_url ?? undefined,
-          prepTime: recipe.prep_minutes ?? undefined,
-          cookTime: recipe.cook_minutes ?? undefined,
-          servings: recipe.servings ?? undefined,
-          wishlistCount: recipe.recipe_saves?.[0]?.count ?? undefined,
-          tags: recipe.tags ?? undefined,
-          difficulty: recipe.difficulty ?? undefined,
-        };
-      });
-
-      setRecipes(mapped);
-      setIsLoading(false);
     };
 
     loadOwnRecipes();
@@ -124,10 +103,10 @@ export default function MyRecipesClient() {
     return () => {
       mounted = false;
     };
-  }, [supabase, userId]);
+  }, [userId]);
 
-  const handleDeleteDemoRecipe = useCallback(
-    (recipeId: number) => {
+  const handleDeleteRecipe = useCallback(
+    async (recipeId: string) => {
       if (!userId || isDeleting) {
         return;
       }
@@ -138,15 +117,22 @@ export default function MyRecipesClient() {
       }
 
       setIsDeleting(true);
-      const success = deleteDemoRecipe(recipeId, userId);
-      if (!success) {
-        alert('Failed to delete recipe. Please try again.');
-        setIsDeleting(false);
-        return;
-      }
+      try {
+        const response = await fetch(`/api/recipes/${recipeId}`, {
+          method: 'DELETE',
+        });
 
-      setRecipes((previous) => previous.filter((recipe) => Number(recipe.id) !== recipeId));
-      setIsDeleting(false);
+        if (!response.ok) {
+          throw new Error('Failed to delete recipe');
+        }
+
+        setRecipes((previous) => previous.filter((recipe) => recipe.id !== recipeId));
+      } catch (error) {
+        console.error('Delete error:', error);
+        alert('Failed to delete recipe. Please try again.');
+      } finally {
+        setIsDeleting(false);
+      }
     },
     [isDeleting, userId],
   );
@@ -196,18 +182,14 @@ export default function MyRecipesClient() {
                   >
                     Edit
                   </Link>
-                  {USE_SUPABASE && supabase ? (
-                    <DeleteRecipeButton recipeId={Number(recipe.id)} />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteDemoRecipe(Number(recipe.id))}
-                      disabled={isDeleting}
-                      className="inline-flex items-center justify-center rounded-lg border border-brand-accent/50 px-3 py-1.5 text-xs font-medium text-brand-accent transition hover:bg-brand-cream-soft disabled:opacity-60"
-                    >
-                      Delete
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteRecipe(recipe.id)}
+                    disabled={isDeleting}
+                    className="inline-flex items-center justify-center rounded-lg border border-brand-accent/50 px-3 py-1.5 text-xs font-medium text-brand-accent transition hover:bg-brand-cream-soft disabled:opacity-60"
+                  >
+                    Delete
+                  </button>
                 </div>
               </div>
             ))}

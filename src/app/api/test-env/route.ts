@@ -37,7 +37,7 @@ try {
 
 export async function GET() {
   const allEnv = Object.keys(process.env)
-    .filter(k => k.includes('CLOUDINARY') || k.includes('SUPABASE'))
+    .filter(k => k.includes('CLOUDINARY') || k.includes('MONGODB'))
     .reduce((acc, key) => {
       acc[key] = process.env[key] ? `${process.env[key]?.substring(0, 10)}...` : 'NOT SET';
       return acc;
@@ -49,9 +49,8 @@ export async function GET() {
       cloudName: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || 'NOT SET',
       uploadPreset: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'NOT SET',
     },
-    supabase: {
-      url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'SET' : 'NOT SET',
-      key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'SET' : 'NOT SET',
+    mongodb: {
+      uri: process.env.MONGODB_URI ? 'SET' : 'NOT SET',
     },
     allRelevantEnv: allEnv,
     cwd: process.cwd(),
