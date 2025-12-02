@@ -109,10 +109,18 @@ export const fetchPublishedRecipes = async (
 
     // Get save counts for all recipes
     const recipeIds = recipes.map((r) => r._id);
-    const saveCounts = await RecipeSave.aggregate([
-      { $match: { recipe_id: { $in: recipeIds } } },
-      { $group: { _id: '$recipe_id', count: { $sum: 1 } } },
-    ]);
+    let saveCounts: any[] = [];
+    if (recipeIds.length > 0) {
+      try {
+        saveCounts = await RecipeSave.aggregate([
+          { $match: { recipe_id: { $in: recipeIds } } },
+          { $group: { _id: '$recipe_id', count: { $sum: 1 } } },
+        ]);
+      } catch (aggError) {
+        console.error('[fetchPublishedRecipes] Save count aggregation error:', aggError);
+        // Continue without save counts if aggregation fails
+      }
+    }
 
     const saveCountMap = new Map(
       saveCounts.map((item) => [item._id.toString(), item.count])
