@@ -105,11 +105,17 @@ export const fetchPublishedRecipes = async (
     let recipes: any[];
     try {
       recipes = await query
-        .populate('author_id', 'full_name username avatar_url')
+        .populate({
+          path: 'author_id',
+          select: 'full_name username avatar_url',
+          model: 'User',
+        })
         .lean()
         .exec();
-    } catch (queryError) {
+    } catch (queryError: any) {
       console.error('[fetchPublishedRecipes] Query error:', queryError);
+      console.error('[fetchPublishedRecipes] Query error name:', queryError?.name);
+      console.error('[fetchPublishedRecipes] Query error message:', queryError?.message);
       throw queryError;
     }
 
