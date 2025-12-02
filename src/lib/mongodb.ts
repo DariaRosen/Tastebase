@@ -1,10 +1,23 @@
 import mongoose from 'mongoose';
 
+// Explicitly load .env.local if not already loaded (fallback for Next.js)
+if (typeof window === 'undefined' && !process.env.MONGO_URL) {
+  try {
+    const { config } = require('dotenv');
+    const path = require('path');
+    config({ path: path.join(process.cwd(), '.env.local') });
+  } catch (e) {
+    // dotenv might not be needed if Next.js loads it, but try anyway
+  }
+}
+
 const getMongoUri = () => {
   const dbURL = process.env.MONGO_URL;
   const dbName = process.env.DB_NAME || 'Tastebase';
   
   if (!dbURL) {
+    console.error('[MongoDB] MONGO_URL not found in process.env');
+    console.error('[MongoDB] Available env keys:', Object.keys(process.env).filter(k => k.includes('MONGO') || k.includes('DB')));
     throw new Error('Please define the MONGO_URL environment variable inside .env.local');
   }
   
