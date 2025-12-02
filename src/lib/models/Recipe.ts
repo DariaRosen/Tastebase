@@ -115,5 +115,5 @@ RecipeSchema.index({ author_id: 1 });
 RecipeSchema.index({ is_published: 1, published_at: -1 });
 RecipeSchema.index({ title: 'text', description: 'text' });
 
-export const Recipe = models.Recipe || model<IRecipe>('Recipe', RecipeSchema);
+export const Recipe = models.Recipe || model<IRecipe>('Recipe', RecipeSchema, 'recipe');
 

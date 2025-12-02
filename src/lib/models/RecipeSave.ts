@@ -32,5 +32,5 @@ const RecipeSaveSchema = new Schema<IRecipeSave>(
 RecipeSaveSchema.index({ user_id: 1, recipe_id: 1 }, { unique: true });
 RecipeSaveSchema.index({ recipe_id: 1 });
 
-export const RecipeSave = models.RecipeSave || model<IRecipeSave>('RecipeSave', RecipeSaveSchema);
+export const RecipeSave = models.RecipeSave || model<IRecipeSave>('RecipeSave', RecipeSaveSchema, 'recipesave');
 
