@@ -13,6 +13,22 @@ if (typeof window === 'undefined' && !process.env.MONGO_URL) {
 }
 
 const getMongoUri = () => {
+  // Try to load .env.local if MONGO_URL is not set
+  if (!process.env.MONGO_URL && typeof window === 'undefined') {
+    try {
+      const dotenv = require('dotenv');
+      const path = require('path');
+      const result = dotenv.config({ path: path.join(process.cwd(), '.env.local') });
+      if (result.error) {
+        console.warn('[MongoDB] dotenv.config error:', result.error);
+      } else {
+        console.log('[MongoDB] Loaded .env.local via dotenv');
+      }
+    } catch (e) {
+      console.warn('[MongoDB] Failed to load .env.local:', e);
+    }
+  }
+  
   const dbURL = process.env.MONGO_URL;
   const dbName = process.env.DB_NAME || 'Tastebase';
   
