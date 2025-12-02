@@ -9,7 +9,9 @@ const getMongoUri = () => {
   }
   
   // Construct full MongoDB URI with database name
-  const uri = `${dbURL}${dbName}?retryWrites=true&w=majority`;
+  // Remove trailing slash from dbURL if present, then append dbName
+  const cleanDbURL = dbURL.endsWith('/') ? dbURL.slice(0, -1) : dbURL;
+  const uri = `${cleanDbURL}/${dbName}?retryWrites=true&w=majority`;
   
   return uri;
 };
