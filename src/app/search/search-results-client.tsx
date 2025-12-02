@@ -1,15 +1,11 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState, useTransition } from 'react';
-import Link from 'next/link';
+import { FormEvent, useCallback, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search as SearchIcon } from 'lucide-react';
-import { createClient } from '@/lib/supabase';
+import { Header } from '@/components/header';
 import { RecipeCard } from '@/components/recipe-card';
-import { USE_SUPABASE } from '@/lib/data-config';
-import { searchRecipesData, getSavedRecipeIds, type RecipeRow } from '@/lib/data-service';
-import { getDemoSession, getSavedRecipeIdsForDemoUser, saveRecipeToWishlist, removeRecipeFromWishlist } from '@/lib/demo-auth';
-
+import type { RecipeRow } from '@/lib/data-service';
 
 type RecipeCardData = {
   id: string;
@@ -30,11 +26,9 @@ interface SearchResultsClientProps {
   initialQuery: string;
 }
 
-
 const skeletonArray = Array.from({ length: 6 });
 
 export default function SearchResultsClient({ initialQuery }: SearchResultsClientProps) {
-  const supabase = useMemo(() => (USE_SUPABASE ? createClient() : null), []);
   const router = useRouter();
 
   const [queryInput, setQueryInput] = useState(initialQuery);
@@ -48,30 +42,23 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
   const [, startTransition] = useTransition();
 
   useEffect(() => {
-    if (!USE_SUPABASE || !supabase) {
-      setUserId(null);
-      setIsLoggedIn(false);
-      return;
-    }
-
-    let mounted = true;
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!mounted) return;
-      setUserId(data.user?.id ?? null);
-      setIsLoggedIn(Boolean(data.user));
-    })();
-
-    const { data: authSub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id ?? null);
-      setIsLoggedIn(Boolean(session?.user));
-    });
-
-    return () => {
-      mounted = false;
-      authSub.subscription.unsubscribe();
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        setIsLoggedIn(Boolean(data.user));
+        setUserId(data.user?.id ?? null);
+      } catch {
+        setIsLoggedIn(false);
+        setUserId(null);
+      }
     };
-  }, [supabase]);
+
+    checkSession();
+    const interval = setInterval(checkSession, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -87,58 +74,60 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
       setIsLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await searchRecipesData(supabase, currentQuery.trim());
+      try {
+        const response = await fetch(`/api/recipes/search?q=${encodeURIComponent(currentQuery.trim())}`);
+        if (!response.ok) {
+          throw new Error('Failed to search recipes');
+        }
+        const { data } = await response.json();
 
-      if (!mounted) {
-        return;
-      }
+        if (!mounted) {
+          return;
+        }
 
-      if (fetchError) {
-        setError(fetchError.message ?? 'Failed to load results.');
-        setRecipes([]);
-        setIsLoading(false);
-        return;
-      }
+        const mapped: RecipeCardData[] = ((data ?? []) as RecipeRow[]).map((recipe) => {
+          const saveCount = recipe.recipe_saves?.[0]?.count ?? 0;
+          const profile = recipe.profiles;
+          const author = profile?.full_name || profile?.username || 'Unknown cook';
+          return {
+            id: recipe.id.toString(),
+            title: recipe.title,
+            description: recipe.description ?? undefined,
+            imageUrl: recipe.hero_image_url ?? undefined,
+            authorName: author,
+            authorAvatar: profile?.avatar_url ?? undefined,
+            prepTime: recipe.prep_minutes ?? undefined,
+            cookTime: recipe.cook_minutes ?? undefined,
+            servings: recipe.servings ?? undefined,
+            wishlistCount: saveCount,
+            tags: recipe.tags ?? undefined,
+            difficulty: recipe.difficulty ?? undefined,
+          };
+        });
 
-      const mapped: RecipeCardData[] = ((data ?? []) as RecipeRow[]).map((recipe) => {
-        const profile = recipe.profiles;
-        const author = profile?.full_name || profile?.username || 'Unknown cook';
-        return {
-          id: recipe.id.toString(),
-          title: recipe.title,
-          description: recipe.description ?? undefined,
-          imageUrl: recipe.hero_image_url ?? undefined,
-          authorName: author,
-          authorAvatar: profile?.avatar_url ?? undefined,
-          prepTime: recipe.prep_minutes ?? undefined,
-          cookTime: recipe.cook_minutes ?? undefined,
-          servings: recipe.servings ?? undefined,
-          wishlistCount: recipe.recipe_saves?.[0]?.count ?? 0,
-          tags: recipe.tags ?? undefined,
-          difficulty: recipe.difficulty ?? undefined,
-        } satisfies RecipeCardData;
-      });
+        setRecipes(mapped);
 
-      setRecipes(mapped);
-
-      if (userId) {
-        if (USE_SUPABASE) {
-          const { data: savedIdsData } = await getSavedRecipeIds(supabase, userId);
-          if (mounted) {
-            setSavedIds(new Set((savedIdsData ?? []).map((id) => id.toString())));
+        if (userId) {
+          const savedIdsResponse = await fetch('/api/recipes/saved-ids');
+          if (savedIdsResponse.ok) {
+            const { data: savedIdsData } = await savedIdsResponse.json();
+            if (mounted) {
+              setSavedIds(new Set((savedIdsData ?? []).map((id: string) => id.toString())));
+            }
           }
         } else {
-          // Use demo wishlist
-          const savedIdsData = getSavedRecipeIdsForDemoUser(userId);
-          if (mounted) {
-            setSavedIds(new Set(savedIdsData.map((id) => id.toString())));
-          }
+          setSavedIds(new Set());
         }
-      } else {
-        setSavedIds(new Set());
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load results.');
+          setRecipes([]);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
-
-      setIsLoading(false);
     };
 
     fetchRecipes();
@@ -146,70 +135,27 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
     return () => {
       mounted = false;
     };
-  }, [currentQuery, supabase, userId]);
+  }, [currentQuery, userId]);
 
   const handleSubmit = useCallback(
     (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const trimmed = queryInput.trim();
+      if (!trimmed) {
+        return;
+      }
       startTransition(() => {
-        router.push(trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : '/search');
         setCurrentQuery(trimmed);
+        router.push(`/search?q=${encodeURIComponent(trimmed)}`, { scroll: false });
       });
     },
-    [queryInput, router, startTransition]
+    [queryInput, router],
   );
 
   const handleToggleSave = useCallback(
     async (recipeId: string) => {
       if (!userId) {
-        setError('Please sign in to manage your wishlist.');
-        setTimeout(() => setError(null), 2000);
-        return;
-      }
-
-      if (!USE_SUPABASE) {
-        // Use demo wishlist
-        const currentlySaved = savedIds.has(recipeId);
-        setSavedIds((prev) => {
-          const next = new Set(prev);
-          if (currentlySaved) {
-            next.delete(recipeId);
-          } else {
-            next.add(recipeId);
-          }
-          return next;
-        });
-
-        setRecipes((prev) =>
-          prev.map((recipe) =>
-            recipe.id === recipeId
-              ? {
-                  ...recipe,
-                  wishlistCount: recipe.wishlistCount + (currentlySaved ? -1 : 1),
-                }
-              : recipe
-          )
-        );
-
-        if (currentlySaved) {
-          const { error } = removeRecipeFromWishlist(userId, Number(recipeId));
-          if (error) {
-            setError(error.message);
-            setTimeout(() => setError(null), 2000);
-          }
-        } else {
-          const { error } = saveRecipeToWishlist(userId, Number(recipeId));
-          if (error) {
-            setError(error.message);
-            setTimeout(() => setError(null), 2000);
-          }
-        }
-        return;
-      }
-
-      if (!supabase) {
-        setError('Authentication is not available.');
+        setError('Please sign in to use your wishlist.');
         setTimeout(() => setError(null), 2000);
         return;
       }
@@ -217,7 +163,7 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
       const currentlySaved = savedIds.has(recipeId);
       setSavedIds((prev) => {
         const next = new Set(prev);
-        if (currentlySaved) {
+        if (next.has(recipeId)) {
           next.delete(recipeId);
         } else {
           next.add(recipeId);
@@ -225,119 +171,108 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
         return next;
       });
 
-      setRecipes((prev) =>
-        prev.map((recipe) =>
-          recipe.id === recipeId
-            ? {
-                ...recipe,
-                wishlistCount: recipe.wishlistCount + (currentlySaved ? -1 : 1),
-              }
-            : recipe
-        )
-      );
-
-      if (currentlySaved) {
-        await supabase
-          .from('recipe_saves')
-          .delete()
-          .eq('user_id', userId)
-          .eq('recipe_id', Number(recipeId));
-      } else {
-        await supabase
-          .from('recipe_saves')
-          .insert({ user_id: userId, recipe_id: Number(recipeId) });
+      try {
+        if (currentlySaved) {
+          const response = await fetch(`/api/recipes/${recipeId}/unsave`, {
+            method: 'POST',
+          });
+          if (!response.ok) throw new Error('Failed to unsave recipe');
+          setRecipes((prev) =>
+            prev.map((recipe) =>
+              recipe.id === recipeId
+                ? {
+                    ...recipe,
+                    wishlistCount: Math.max(recipe.wishlistCount - 1, 0),
+                  }
+                : recipe,
+            ),
+          );
+        } else {
+          const response = await fetch(`/api/recipes/${recipeId}/save`, {
+            method: 'POST',
+          });
+          if (!response.ok) throw new Error('Failed to save recipe');
+          setRecipes((prev) =>
+            prev.map((recipe) =>
+              recipe.id === recipeId
+                ? {
+                    ...recipe,
+                    wishlistCount: recipe.wishlistCount + 1,
+                  }
+                : recipe,
+            ),
+          );
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update wishlist');
+        setTimeout(() => setError(null), 2000);
+        // Revert optimistic update
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          if (currentlySaved) {
+            next.add(recipeId);
+          } else {
+            next.delete(recipeId);
+          }
+          return next;
+        });
       }
     },
-    [savedIds, supabase, userId]
+    [savedIds, userId],
   );
 
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col gap-6 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold text-gray-900">Search recipes</h1>
-          <p className="text-sm text-gray-600">
-            Explore dishes by keywords. Try ingredients, cuisines, or chef names.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 md:flex-row md:items-center">
-          <div className="relative flex-1">
-            <SearchIcon className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-brand-secondary/60" />
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <main className="container mx-auto px-4 py-8">
+        <form onSubmit={handleSubmit} className="mb-8">
+          <div className="relative flex items-center">
             <input
-              type="search"
+              type="text"
               value={queryInput}
-              onChange={(event) => setQueryInput(event.target.value)}
-              placeholder="Type a recipe name, ingredient, or chef…"
+              onChange={(e) => setQueryInput(e.target.value)}
+              placeholder="Search recipes, ingredients, or tags..."
+              className="h-12 w-full rounded-l-full border border-border-subtle bg-white px-5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               aria-label="Search for recipes"
-              className="w-full rounded-full border border-border-subtle bg-white py-3 pl-12 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
             />
+            <button
+              type="submit"
+              className="flex h-12 w-14 items-center justify-center rounded-r-full bg-brand-primary text-white transition hover:bg-brand-primary-hover"
+              aria-label="Search"
+            >
+              <SearchIcon className="h-5 w-5" />
+            </button>
           </div>
-          <button
-            type="submit"
-            className="inline-flex items-center justify-center rounded-full bg-brand-primary px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
-          >
-            Search
-          </button>
         </form>
 
-        {!currentQuery && (
-          <p className="text-sm text-gray-500">
-            Hint: search for favorites like “pasta”, “Szechuan”, or “vegetarian”.
-          </p>
-        )}
-      </div>
-
-      {error && (
-        <div className="rounded-xl border border-brand-accent/30 bg-brand-cream-soft p-4 text-sm text-brand-accent">
-          {error}
-        </div>
-      )}
-
-      {isLoading ? (
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {skeletonArray.map((_, index) => (
-            <div key={index} className="h-72 animate-pulse rounded-xl bg-brand-cream/60" />
-          ))}
-        </div>
-      ) : recipes.length > 0 ? (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-medium text-gray-700">
-              Found {recipes.length} recipe{recipes.length === 1 ? '' : 's'}
-            </h2>
-            <Link
-              href="/"
-              className="inline-flex items-center justify-center rounded-full bg-brand-secondary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
-            >
-              Back to recipes
-            </Link>
+        {isLoading ? (
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {skeletonArray.map((_, index) => (
+              <div key={index} className="h-72 animate-pulse rounded-xl bg-brand-cream/60" />
+            ))}
           </div>
+        ) : error ? (
+          <div className="rounded-xl border border-brand-accent/30 bg-brand-cream-soft p-6 text-center text-brand-accent">
+            {error}
+          </div>
+        ) : recipes.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {recipes.map((recipe) => (
               <RecipeCard
                 key={recipe.id}
                 {...recipe}
                 isSaved={savedIds.has(recipe.id)}
-                onToggleSave={isLoggedIn ? handleToggleSave : undefined}
+                onToggleSave={handleToggleSave}
               />
             ))}
           </div>
-        </div>
-      ) : currentQuery ? (
-        <div className="rounded-3xl border border-border-subtle bg-white p-10 text-center">
-          <h2 className="text-xl font-semibold text-gray-800">No recipes found</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Try a different keyword or check out the latest creations on the home page.
-          </p>
-          <Link
-            href="/"
-            className="mt-6 inline-flex items-center justify-center rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
-          >
-            Browse recipes
-          </Link>
-        </div>
-      ) : null}
+        ) : currentQuery.trim() ? (
+          <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border-subtle bg-white p-12 text-center">
+            <p className="text-lg font-medium text-gray-700">No recipes found</p>
+            <p className="text-sm text-gray-500">Try a different search term.</p>
+          </div>
+        ) : null}
+      </main>
     </div>
   );
 }

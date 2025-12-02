@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { deleteRecipeAction } from './actions';
 
 interface DeleteRecipeButtonProps {
-  recipeId: number;
+  recipeId: string;
 }
 
 export function DeleteRecipeButton({ recipeId }: DeleteRecipeButtonProps) {

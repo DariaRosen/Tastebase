@@ -1,277 +1,230 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { createServerSupabase } from '@/lib/supabaseServer';
 import { Header } from '@/components/header';
 import { SaveRecipeToggle } from '@/components/save-recipe-toggle';
 import { DeleteRecipeButton } from './delete-button';
-import { USE_SUPABASE } from '@/lib/data-config';
 import { fetchRecipeById, checkRecipeSaved } from '@/lib/data-service';
-import { DemoRecipeDetailClient } from './demo-recipe-detail-client';
-
-type RecipeDetailRow = {
-	id: number;
-	author_id: string | null;
-	title: string;
-	description: string | null;
-	hero_image_url: string | null;
-	servings: number | null;
-	prep_minutes: number | null;
-	cook_minutes: number | null;
-	tags: string[] | null;
-	difficulty: string | null;
-	published_at: string | null;
-	profiles:
-		| {
-				full_name: string | null;
-				username: string | null;
-				avatar_url: string | null;
-		  }
-		| null;
-	recipe_ingredients: {
-		position: number;
-		quantity: string | null;
-		unit: string | null;
-		name: string;
-		note: string | null;
-	}[];
-	recipe_steps: {
-		position: number;
-		instruction: string;
-	}[];
-	recipe_saves: { count: number | null }[] | null;
-};
+import { getCurrentUser } from '@/lib/auth-service';
 
 interface RecipeDetailPageProps {
-	params: { id: string };
+  params: { id: string };
 }
 
 export default async function RecipeDetailPage({ params }: RecipeDetailPageProps) {
-	const resolvedParams = await params;
-	const recipeId = Number(resolvedParams.id);
-	if (Number.isNaN(recipeId)) {
-		notFound();
-	}
+  const resolvedParams = await params;
+  const recipeId = resolvedParams.id;
 
-	if (!USE_SUPABASE) {
-		return <DemoRecipeDetailClient recipeId={recipeId} />;
-	}
+  const { data: recipe, error } = await fetchRecipeById(null, recipeId);
 
-	const supabase = await createServerSupabase();
-	const { data: recipe, error } = await fetchRecipeById(supabase, recipeId);
+  if (error) {
+    if (error.message) {
+      console.error('[RecipeDetail] fetch error', { recipeId, message: error.message });
+    }
+    notFound();
+  }
 
-	if (error) {
-		if (error.message) {
-			console.error('[RecipeDetail] fetch error', { recipeId, message: error.message });
-		}
-		notFound();
-	}
+  if (!recipe) {
+    console.warn('[RecipeDetail] no recipe found', { recipeId });
+    notFound();
+  }
 
-	if (!recipe) {
-		console.warn('[RecipeDetail] no recipe found', { recipeId });
-		notFound();
-	}
+  const user = await getCurrentUser();
 
-	const {
-		data: { user },
-	} = await supabase.auth.getUser();
+  let isSaved = false;
+  let wishlistCount = recipe.recipe_saves?.[0]?.count ?? 0;
+  if (user) {
+    const { data: saved } = await checkRecipeSaved(null, recipeId, user.id);
+    isSaved = saved;
+  }
 
-	let isSaved = false;
-	let wishlistCount = recipe.recipe_saves?.[0]?.count ?? 0;
-	if (user) {
-		const { data: saved } = await checkRecipeSaved(supabase, recipeId, user.id);
-		isSaved = saved;
-	}
+  const profile = recipe.profiles;
+  const authorName = profile?.full_name || profile?.username || 'Unknown cook';
+  const isOwner = user?.id && recipe.author_id === user.id;
 
-	const profile = recipe.profiles;
-	const authorName = profile?.full_name || profile?.username || 'Unknown cook';
-	const isOwner = user?.id && recipe.author_id === user.id;
+  const ingredients = (recipe.recipe_ingredients ?? []).sort(
+    (a, b) => a.position - b.position,
+  );
+  const steps = (recipe.recipe_steps ?? []).sort((a, b) => a.position - b.position);
 
-	const ingredients = (recipe.recipe_ingredients ?? []).sort(
-		(a, b) => a.position - b.position,
-	);
-	const steps = (recipe.recipe_steps ?? []).sort((a, b) => a.position - b.position);
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header />
+      <main className="container mx-auto px-4 py-10">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
+          {isOwner && (
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/edit/${recipe.id}`}
+                className="inline-flex items-center justify-center rounded-lg border border-border-subtle px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-brand-cream"
+              >
+                Edit recipe
+              </Link>
+              <DeleteRecipeButton recipeId={recipe.id} />
+            </div>
+          )}
+          <Link
+            href="/"
+            className="inline-flex items-center justify-center rounded-full bg-brand-secondary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
+          >
+            Back to recipes
+          </Link>
+        </div>
 
-	return (
-		<div className="min-h-screen bg-gray-50">
-			<Header />
-			<main className="container mx-auto px-4 py-10">
-				<div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-end">
-					{isOwner && (
-						<div className="flex items-center gap-3">
-							<Link
-								href={`/edit/${recipe.id}`}
-								className="inline-flex items-center justify-center rounded-lg border border-border-subtle px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-brand-cream"
-							>
-								Edit recipe
-							</Link>
-							<DeleteRecipeButton recipeId={recipe.id} />
-						</div>
-					)}
-					<Link
-						href="/"
-						className="inline-flex items-center justify-center rounded-full bg-brand-secondary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
-					>
-						Back to recipes
-					</Link>
-				</div>
+        <section className="mx-auto grid max-w-3xl gap-8 lg:grid-cols-[2fr,1fr]">
+          <div className="space-y-6">
+            <div className="relative mx-auto h-[350px] w-[min(100%,500px)] overflow-hidden rounded-3xl border border-border-subtle bg-brand-cream">
+              {recipe.hero_image_url ? (
+                <Image
+                  src={recipe.hero_image_url}
+                  alt={recipe.title}
+                  fill
+                  className="object-cover"
+                  sizes="500px"
+                  priority
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center text-6xl text-brand-secondary">🍽️</div>
+              )}
+            </div>
 
-				<section className="mx-auto grid max-w-3xl gap-8 lg:grid-cols-[2fr,1fr]">
-					<div className="space-y-6">
-						<div className="relative mx-auto h-[350px] w-[min(100%,500px)] overflow-hidden rounded-3xl border border-border-subtle bg-brand-cream">
-								{recipe.hero_image_url ? (
-									<Image
-										src={recipe.hero_image_url}
-										alt={recipe.title}
-									fill
-									className="object-cover"
-									sizes="500px"
-										priority
-									/>
-								) : (
-									<div className="flex h-full items-center justify-center text-6xl text-brand-secondary">🍽️</div>
-								)}
-							</div>
+            <div className="flex flex-col gap-6 rounded-3xl border border-border-subtle bg-white p-6 shadow-sm">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-3">
+                  <h1 className="text-3xl font-bold text-brand-secondary">{recipe.title}</h1>
+                  <div className="flex items-center gap-3">
+                    {profile?.avatar_url ? (
+                      <div className="relative h-10 w-10 overflow-hidden rounded-full border border-border-subtle bg-brand-cream">
+                        <Image
+                          src={profile.avatar_url}
+                          alt={authorName}
+                          fill
+                          className="object-cover"
+                          sizes="40px"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-brand-cream" />
+                    )}
+                    <div>
+                      <p className="text-sm text-gray-500">Recipe by</p>
+                      <p className="font-medium text-brand-secondary">{authorName}</p>
+                    </div>
+                  </div>
+                </div>
+                <SaveRecipeToggle
+                  recipeId={recipe.id}
+                  initialSaved={isSaved}
+                  initialCount={wishlistCount}
+                />
+              </div>
 
-							<div className="flex flex-col gap-6 rounded-3xl border border-border-subtle bg-white p-6 shadow-sm">
-								<div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-									<div className="space-y-3">
-										<h1 className="text-3xl font-bold text-brand-secondary">{recipe.title}</h1>
-										<div className="flex items-center gap-3">
-											{profile?.avatar_url ? (
-												<div className="relative h-10 w-10 overflow-hidden rounded-full border border-border-subtle bg-brand-cream">
-													<Image
-														src={profile.avatar_url}
-														alt={authorName}
-														fill
-														className="object-cover"
-														sizes="40px"
-													/>
-												</div>
-											) : (
-												<div className="h-10 w-10 rounded-full bg-brand-cream" />
-											)}
-											<div>
-												<p className="text-sm text-gray-500">Recipe by</p>
-												<p className="font-medium text-brand-secondary">{authorName}</p>
-											</div>
-										</div>
-									</div>
-									<SaveRecipeToggle
-										recipeId={recipe.id}
-										initialSaved={isSaved}
-										initialCount={wishlistCount}
-									/>
-								</div>
+              {recipe.description && (
+                <p className="text-lg text-gray-700">{recipe.description}</p>
+              )}
 
-								{recipe.description && (
-									<p className="text-lg text-gray-700">{recipe.description}</p>
-								)}
+              <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
+                {recipe.prep_minutes !== null && (
+                  <div>
+                    <span className="font-medium text-brand-secondary">Prep:</span>{' '}
+                    {recipe.prep_minutes} min
+                  </div>
+                )}
+                {recipe.cook_minutes !== null && (
+                  <div>
+                    <span className="font-medium text-brand-secondary">Cook:</span>{' '}
+                    {recipe.cook_minutes} min
+                  </div>
+                )}
+                {recipe.servings !== null && (
+                  <div>
+                    <span className="font-medium text-brand-secondary">Servings:</span>{' '}
+                    {recipe.servings}
+                  </div>
+                )}
+                {recipe.difficulty && (
+                  <div>
+                    <span className="font-medium text-brand-secondary">Difficulty:</span>{' '}
+                    {recipe.difficulty}
+                  </div>
+                )}
+                <div>
+                  <span className="font-medium text-brand-secondary">Wishlist:</span>{' '}
+                  {wishlistCount}
+                </div>
+              </div>
 
-								<div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-									{recipe.prep_minutes !== null && (
-										<div>
-											<span className="font-medium text-brand-secondary">Prep:</span>{' '}
-											{recipe.prep_minutes} min
-										</div>
-									)}
-									{recipe.cook_minutes !== null && (
-										<div>
-											<span className="font-medium text-brand-secondary">Cook:</span>{' '}
-											{recipe.cook_minutes} min
-										</div>
-									)}
-									{recipe.servings !== null && (
-										<div>
-											<span className="font-medium text-brand-secondary">Servings:</span>{' '}
-											{recipe.servings}
-										</div>
-									)}
-									{recipe.difficulty && (
-										<div>
-											<span className="font-medium text-brand-secondary">Difficulty:</span>{' '}
-											{recipe.difficulty}
-										</div>
-									)}
-									<div>
-										<span className="font-medium text-brand-secondary">Wishlist:</span>{' '}
-										{wishlistCount}
-									</div>
-								</div>
+              {recipe.tags && recipe.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {recipe.tags.map((tag: string) => (
+                    <span
+                      key={tag}
+                      className="rounded-full bg-brand-cream-soft px-3 py-1 text-xs font-medium text-brand-secondary"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
 
-								{recipe.tags && recipe.tags.length > 0 && (
-									<div className="flex flex-wrap gap-2">
-										{recipe.tags.map((tag: string) => (
-											<span
-												key={tag}
-												className="rounded-full bg-brand-cream-soft px-3 py-1 text-xs font-medium text-brand-secondary"
-											>
-												#{tag}
-											</span>
-										))}
-									</div>
-								)}
-							</div>
+            <section className="rounded-3xl border border-border-subtle bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-2xl font-semibold text-brand-secondary">Ingredients</h2>
+              <ul className="space-y-3 text-gray-700">
+                {ingredients.map((ingredient, index) => {
+                  const parts = [
+                    ingredient.quantity?.trim(),
+                    ingredient.unit?.trim(),
+                    ingredient.name.trim(),
+                  ].filter(Boolean);
+                  return (
+                    <li key={`${ingredient.position}-${ingredient.name}-${index}`}>
+                      <span className="font-medium">{parts.join(' ')}</span>
+                      {ingredient.note && (
+                        <span className="text-sm text-gray-500"> – {ingredient.note}</span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
 
-							<section className="rounded-3xl border border-border-subtle bg-white p-6 shadow-sm">
-								<h2 className="mb-4 text-2xl font-semibold text-brand-secondary">Ingredients</h2>
-								<ul className="space-y-3 text-gray-700">
-									{ingredients.map((ingredient, index) => {
-										const parts = [
-											ingredient.quantity?.trim(),
-											ingredient.unit?.trim(),
-											ingredient.name.trim(),
-										].filter(Boolean);
-										return (
-											<li key={`${ingredient.position}-${ingredient.name}-${index}`}>
-												<span className="font-medium">{parts.join(' ')}</span>
-												{ingredient.note && (
-													<span className="text-sm text-gray-500"> – {ingredient.note}</span>
-												)}
-											</li>
-										);
-									})}
-								</ul>
-							</section>
+            <section className="rounded-3xl border border-border-subtle bg-white p-6 shadow-sm">
+              <h2 className="mb-4 text-2xl font-semibold text-brand-secondary">Steps</h2>
+              <ol className="list-decimal space-y-4 pl-6 text-gray-700">
+                {steps.map((step) => (
+                  <li key={`${step.position}-${step.instruction}`} className="leading-relaxed">
+                    {step.instruction}
+                  </li>
+                ))}
+              </ol>
+            </section>
+          </div>
 
-							<section className="rounded-3xl border border-border-subtle bg-white p-6 shadow-sm">
-								<h2 className="mb-4 text-2xl font-semibold text-brand-secondary">Steps</h2>
-								<ol className="list-decimal space-y-4 pl-6 text-gray-700">
-									{steps.map((step) => (
-										<li key={`${step.position}-${step.instruction}`} className="leading-relaxed">
-											{step.instruction}
-										</li>
-									))}
-								</ol>
-							</section>
-						</div>
-
-						<aside className="flex flex-col gap-6">
-							<div className="rounded-3xl border border-border-subtle bg-brand-cream-soft p-6 text-sm text-brand-secondary">
-								<h3 className="mb-2 text-lg font-semibold text-brand-secondary">Chef&apos;s tip</h3>
-								<p>
-									Save recipes to your wishlist to build a personal cooking plan. We&apos;ll show new
-									inspiration based on what you love.
-								</p>
-							</div>
-							<div className="rounded-3xl border border-border-subtle bg-white p-6 shadow-sm">
-								<h3 className="mb-3 text-lg font-semibold text-brand-secondary">Need more inspiration?</h3>
-								<p className="text-sm text-gray-600">
-									Check the Popular tab on the home page to find the most-saved recipes in the
-									community this week.
-								</p>
-								<Link
-									href="/"
-									className="mt-4 inline-flex items-center justify-center rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
-								>
-									Browse recipes
-								</Link>
-							</div>
-						</aside>
-					</section>
-			</main>
-		</div>
-	);
+          <aside className="flex flex-col gap-6">
+            <div className="rounded-3xl border border-border-subtle bg-brand-cream-soft p-6 text-sm text-brand-secondary">
+              <h3 className="mb-2 text-lg font-semibold text-brand-secondary">Chef&apos;s tip</h3>
+              <p>
+                Save recipes to your wishlist to build a personal cooking plan. We&apos;ll show new
+                inspiration based on what you love.
+              </p>
+            </div>
+            <div className="rounded-3xl border border-border-subtle bg-white p-6 shadow-sm">
+              <h3 className="mb-3 text-lg font-semibold text-brand-secondary">Need more inspiration?</h3>
+              <p className="text-sm text-gray-600">
+                Check the Popular tab on the home page to find the most-saved recipes in the
+                community this week.
+              </p>
+              <Link
+                href="/"
+                className="mt-4 inline-flex items-center justify-center rounded-full bg-brand-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
+              >
+                Browse recipes
+              </Link>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </div>
+  );
 }
-
-

@@ -1,9 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase';
-import { USE_SUPABASE } from '@/lib/data-config';
-import { signUpDemoUser, signInDemoUser } from '@/lib/demo-auth';
+import { useRouter } from 'next/navigation';
 
 interface AuthDialogProps {
   open: boolean;
@@ -14,10 +12,11 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const TEST_PASSWORD = 'tastebase-dev';
+  const router = useRouter();
 
   const handleClose = () => {
     if (isLoading) return;
@@ -25,303 +24,67 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
     setTimeout(() => {
       setName('');
       setEmail('');
+      setPassword('');
       setMessage(null);
       setError(null);
       setMode('login');
     }, 200);
   };
 
-  const sanitizeUsername = (value: string) =>
-    value
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9_-]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .slice(0, 32);
-
-  const fallbackUsernameFromEmail = (emailValue: string) => {
-    const base =
-      sanitizeUsername(emailValue.split('@')[0] ?? '') ||
-      `cook-${Math.random().toString(36).slice(2, 8)}`;
-    return base;
-  };
-
-  const ensureProfile = async (
-    supabase: ReturnType<typeof createClient>,
-    usernameHint?: string,
-    fullNameHint?: string
-  ) => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
-
-    const metadataUsername = sanitizeUsername((user.user_metadata as any)?.username ?? '');
-    const metadataFullName = ((user.user_metadata as any)?.full_name as string | undefined)?.trim();
-
-    const { data: existingProfile } = await supabase
-      .from('profiles')
-      .select('username, full_name')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    const desiredUsername =
-      sanitizeUsername(usernameHint ?? '') ||
-      metadataUsername ||
-      fallbackUsernameFromEmail(user.email ?? '') ||
-      `cook-${user.id.slice(0, 6)}`;
-
-    let candidate = desiredUsername;
-    let suffix = 1;
-    while (true) {
-      const { data: clash } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('username', candidate)
-        .neq('id', user.id)
-        .maybeSingle();
-
-      if (!clash) break;
-
-      const suffixStr = `-${suffix}`;
-      const trimmed = candidate.slice(0, Math.max(0, 32 - suffixStr.length));
-      candidate = sanitizeUsername(`${trimmed}${suffixStr}`);
-      suffix += 1;
-    }
-
-    const fullNameCandidate =
-      (fullNameHint && fullNameHint.trim()) ||
-      existingProfile?.full_name?.trim() ||
-      metadataFullName ||
-      user.email ||
-      candidate;
-
-    const row: Record<string, unknown> = { id: user.id };
-    if (!existingProfile?.username) {
-      row.username = candidate;
-    }
-    if (!existingProfile?.full_name) {
-      row.full_name = fullNameCandidate;
-    }
-    const avatarUrl = (user.user_metadata as any)?.avatar_url as string | undefined;
-    if (avatarUrl) {
-      row.avatar_url = avatarUrl;
-    }
-
-    if (Object.keys(row).length > 1) {
-      const { error: profileError } = await supabase.from('profiles').upsert(row);
-      if (profileError) {
-        console.warn('[AuthDialog] failed to upsert profile', profileError);
-      }
-    }
-
-    const metadataUpdates: Record<string, string> = {};
-    if (!metadataUsername) {
-      metadataUpdates.username = candidate;
-    }
-    if (!metadataFullName) {
-      metadataUpdates.full_name = fullNameCandidate;
-    }
-    if (Object.keys(metadataUpdates).length > 0) {
-      await supabase.auth.updateUser({ data: { ...user.user_metadata, ...metadataUpdates } }).catch((error) => {
-        console.warn('[AuthDialog] failed to update auth metadata', error);
-      });
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setMessage(null);
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setError(null);
-    
+    setMessage(null);
+    setIsLoading(true);
+
     try {
-      // Use demo auth when Supabase is disabled
-      if (!USE_SUPABASE) {
-        if (mode === 'login') {
-          const { user, error: signInError } = await signInDemoUser(email);
-          if (signInError) {
-            // If user doesn't exist, try to create them
-            const cleanedFullName = name.trim();
-            const { user: newUser, error: signUpError } = await signUpDemoUser(email, cleanedFullName);
-            if (signUpError) {
-              setError(signUpError.message);
-              setIsLoading(false);
-              return;
-            }
-            setMessage('Account created and signed in.');
-            onOpenChange(false);
-            // Refresh page to update auth state
-            setTimeout(() => window.location.reload(), 500);
-            return;
-          }
-          setMessage('Signed in.');
-          onOpenChange(false);
-          // Refresh page to update auth state
-          setTimeout(() => window.location.reload(), 500);
-        } else {
-          // Sign up mode
-          const cleanedFullName = name.trim();
-          const { user, error: signUpError } = await signUpDemoUser(email, cleanedFullName);
-          if (signUpError) {
-            setError(signUpError.message);
-            setIsLoading(false);
-            return;
-          }
-          setMessage('Account created. You are signed in.');
-          onOpenChange(false);
-          // Refresh page to update auth state
-          setTimeout(() => window.location.reload(), 500);
-        }
-        return;
-      }
-      
-      // Use Supabase auth
-      const supabase = createClient();
-      if (!supabase) {
-        setError('Supabase client is not available. Please check your configuration.');
-        setIsLoading(false);
-        return;
-      }
-      if (mode === 'login') {
-        const fallbackUsername = fallbackUsernameFromEmail(email);
-        // Try sign in; if it fails (user not found), auto-create then sign in
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password: TEST_PASSWORD });
-        if (signInError) {
-          const fullName = name.trim();
-          await supabase.auth
-            .signUp({
-              email,
-              password: TEST_PASSWORD,
-              options: {
-                emailRedirectTo: undefined,
-                data: {
-                  username: fallbackUsername,
-                  full_name: fullName || fallbackUsername,
-                },
-              },
-            })
-            .catch(() => {});
-          const { error: secondTry } = await supabase.auth.signInWithPassword({
+      if (mode === 'signup') {
+        const response = await fetch('/api/auth/signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             email,
-            password: TEST_PASSWORD,
-          });
-          if (secondTry) {
-            setError(secondTry.message);
-            setIsLoading(false);
-            return;
-          }
-        }
-        await ensureProfile(supabase, fallbackUsername, name);
-        setMessage('Signed in.');
-        onOpenChange(false);
-      } else {
-        const cleanedFullName = name.trim();
-        const metadataUsername =
-          sanitizeUsername(cleanedFullName) || fallbackUsernameFromEmail(email);
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password: TEST_PASSWORD,
-          options: {
-            data: {
-              username: metadataUsername,
-              full_name: cleanedFullName || metadataUsername,
-            },
-            emailRedirectTo: undefined,
-          },
+            password,
+            fullName: name.trim() || undefined,
+          }),
         });
-        if (signUpError) {
-          setError(signUpError.message);
-        } else {
-          await supabase.auth.signInWithPassword({ email, password: TEST_PASSWORD }).catch(() => {});
-          await ensureProfile(supabase, metadataUsername, cleanedFullName);
-          setMessage('Account created. You are signed in.');
-          onOpenChange(false);
-        }
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
-  const handleDevEmailOnly = async () => {
-    setIsLoading(true);
-    setMessage(null);
-    setError(null);
-    
-    try {
-      // Use demo auth when Supabase is disabled
-      if (!USE_SUPABASE) {
-        const cleanedFullName = name.trim();
-        const { user, error: signInError } = await signInDemoUser(email);
-        if (signInError) {
-          // If user doesn't exist, create them
-          const { user: newUser, error: signUpError } = await signUpDemoUser(email, cleanedFullName);
-          if (signUpError) {
-            setError(signUpError.message);
-            setIsLoading(false);
-            return;
-          }
-          setMessage('Account created and signed in (dev).');
-          onOpenChange(false);
-          setTimeout(() => window.location.reload(), 500);
-          return;
-        }
-        setMessage('Signed in (dev).');
-        onOpenChange(false);
-        setTimeout(() => window.location.reload(), 500);
-        return;
-      }
-      
-      // Use Supabase auth
-      const supabase = createClient();
-      if (!supabase) {
-        setError('Supabase client is not available. Please check your configuration.');
-        setIsLoading(false);
-        return;
-      }
-      let { error: signInErr } = await supabase.auth.signInWithPassword({
-        email,
-        password: TEST_PASSWORD,
-      });
-      const cleanedFullName = name.trim();
-      if (signInErr) {
-        const fallbackUsername = fallbackUsernameFromEmail(email);
-        const { error: signUpErr } = await supabase.auth.signUp({
-          email,
-          password: TEST_PASSWORD,
-          options: {
-            emailRedirectTo: undefined,
-            data: {
-              username: fallbackUsername,
-              full_name: cleanedFullName || fallbackUsername,
-            },
-          },
-        });
-        if (signUpErr) {
-          setError(signUpErr.message);
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || 'Failed to create account');
           setIsLoading(false);
           return;
         }
-        const { error: signInErr2 } = await supabase.auth.signInWithPassword({
-          email,
-          password: TEST_PASSWORD,
+
+        setMessage('Account created successfully! Redirecting...');
+        setTimeout(() => {
+          router.refresh();
+          handleClose();
+        }, 1000);
+      } else {
+        const response = await fetch('/api/auth/signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
         });
-        if (signInErr2) {
-          setError(signInErr2.message);
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          setError(data.error || 'Invalid email or password');
           setIsLoading(false);
           return;
         }
-        await ensureProfile(supabase, fallbackUsername, cleanedFullName);
+
+        setMessage('Signed in successfully! Redirecting...');
+        setTimeout(() => {
+          router.refresh();
+          handleClose();
+        }, 1000);
       }
-      await ensureProfile(supabase, undefined, cleanedFullName);
-      setMessage('Signed in (dev).');
-      onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
+      setError(err instanceof Error ? err.message : 'An error occurred');
       setIsLoading(false);
     }
   };
@@ -329,100 +92,121 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-start justify-center bg-black/60 p-4 pt-24"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Sign in"
-      onClick={handleClose}
-    >
-      <div
-        className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-        role="document"
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {mode === 'login' ? 'Log in' : 'Sign up'}
-          </h2>
-          <button
-            type="button"
-            onClick={() => setMode((m) => (m === 'login' ? 'signup' : 'login'))}
-            className="text-sm font-medium text-brand-primary hover:underline"
-            aria-label="Toggle auth mode"
-          >
-            {mode === 'login' ? 'Create account' : 'Have an account? Log in'}
-          </button>
-        </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
+        <button
+          onClick={handleClose}
+          className="absolute right-4 top-4 text-gray-400 hover:text-gray-600"
+          aria-label="Close"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <h2 className="mb-6 text-2xl font-bold text-brand-secondary">
+          {mode === 'login' ? 'Sign in' : 'Create account'}
+        </h2>
+
         <form onSubmit={handleSubmit} className="space-y-4">
           {mode === 'signup' && (
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">Name</span>
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                Full name (optional)
+              </label>
               <input
+                id="name"
                 type="text"
-                required
-                minLength={2}
-                maxLength={64}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                placeholder="Jane Doe"
-                aria-label="Name"
+                className="mt-1 block w-full rounded-lg border border-border-subtle px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+                placeholder="John Doe"
               />
-            </label>
+            </div>
           )}
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-gray-700">Email</span>
+
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              Email
+            </label>
             <input
+              id="email"
               type="email"
-              required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              autoFocus
-              className="w-full rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-secondary focus:outline-none focus:ring-2 focus:ring-brand-gold/60"
+              required
+              className="mt-1 block w-full rounded-lg border border-border-subtle px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               placeholder="you@example.com"
-              aria-label="Email address"
             />
-          </label>
-          {mode === 'login' && (
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">Name (optional)</span>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-                placeholder="Jane Doe"
-                aria-label="Name"
-              />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              Password
             </label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="mt-1 block w-full rounded-lg border border-border-subtle px-3 py-2 text-sm focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+              placeholder="••••••••"
+            />
+          </div>
+
+          {error && (
+            <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600">{error}</div>
           )}
+
+          {message && (
+            <div className="rounded-lg bg-green-50 p-3 text-sm text-green-600">{message}</div>
+          )}
+
           <button
             type="submit"
             disabled={isLoading}
-            className="inline-flex w-full items-center justify-center rounded-lg bg-brand-primary px-4 py-2 font-semibold text-white transition-colors hover:bg-brand-primary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary disabled:opacity-60"
-            aria-busy={isLoading}
-            aria-disabled={isLoading}
+            className="w-full rounded-lg bg-brand-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-primary-hover disabled:opacity-50"
           >
-            {isLoading ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Sign up'}
+            {isLoading ? 'Loading...' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
-          {message && <p className="text-sm text-green-600">{message}</p>}
-          {error && <p className="text-sm text-red-600">{error}</p>}
         </form>
-        <div className="my-4 h-px w-full bg-gray-200" />
-        <p className="text-xs text-gray-500">
-          Dev-only: no password field. A fixed password is used behind the scenes.
-        </p>
-        <button
-          onClick={handleClose}
-          className="mt-4 w-full rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50"
-          aria-label="Close"
-        >
-          Close
-        </button>
+
+        <div className="mt-4 text-center text-sm text-gray-600">
+          {mode === 'login' ? (
+            <>
+              Don't have an account?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('signup');
+                  setError(null);
+                  setMessage(null);
+                }}
+                className="font-medium text-brand-primary hover:underline"
+              >
+                Sign up
+              </button>
+            </>
+          ) : (
+            <>
+              Already have an account?{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setMode('login');
+                  setError(null);
+                  setMessage(null);
+                }}
+                className="font-medium text-brand-primary hover:underline"
+              >
+                Sign in
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
 };
-
-

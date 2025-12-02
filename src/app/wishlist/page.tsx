@@ -1,15 +1,10 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/header';
 import { RecipeCard } from '@/components/recipe-card';
-import { createClient } from '@/lib/supabase';
-import { USE_SUPABASE } from '@/lib/data-config';
-import { fetchSavedRecipes, type RecipeRow, convertDemoRecipeToRow } from '@/lib/data-service';
-import { getDemoSession, getSavedRecipeIdsForDemoUser, saveRecipeToWishlist, removeRecipeFromWishlist, isRecipeSavedByDemoUser } from '@/lib/demo-auth';
-import { getSavedRecipesForUser } from '@/lib/demo-data';
-
+import type { RecipeRow } from '@/lib/data-service';
 
 type RecipeCardData = {
   id: string;
@@ -27,7 +22,6 @@ type RecipeCardData = {
 };
 
 export default function WishlistPage() {
-  const supabase = useMemo(() => (USE_SUPABASE ? createClient() : null), []);
   const [userId, setUserId] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<RecipeCardData[]>([]);
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
@@ -35,47 +29,21 @@ export default function WishlistPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!USE_SUPABASE) {
-      // Check demo auth
-      const demoUser = getDemoSession();
-      setUserId(demoUser?.id ?? null);
-      
-      // Listen for storage changes
-      const handleStorageChange = () => {
-        const user = getDemoSession();
-        setUserId(user?.id ?? null);
-      };
-      window.addEventListener('storage', handleStorageChange);
-      const interval = setInterval(() => {
-        const user = getDemoSession();
-        setUserId(user?.id ?? null);
-      }, 1000);
-      
-      return () => {
-        window.removeEventListener('storage', handleStorageChange);
-        clearInterval(interval);
-      };
-    }
-
-    if (!supabase) {
-      setUserId(null);
-      return;
-    }
-
-    let mounted = true;
-    (async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!mounted) return;
-      setUserId(data.user?.id ?? null);
-    })();
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id ?? null);
-    });
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
+    const checkSession = async () => {
+      try {
+        const response = await fetch('/api/auth/session');
+        const data = await response.json();
+        setUserId(data.user?.id ?? null);
+      } catch {
+        setUserId(null);
+      }
     };
-  }, [supabase]);
+
+    checkSession();
+    const interval = setInterval(checkSession, 5000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -89,13 +57,24 @@ export default function WishlistPage() {
       setIsLoading(true);
       setError(null);
 
-      if (!USE_SUPABASE) {
-        // Use demo wishlist
-        const savedRecipes = getSavedRecipesForUser(userId);
-        const mapped: RecipeCardData[] = savedRecipes.map((recipe) => {
-          const row = convertDemoRecipeToRow(recipe);
-          const saveCount = row.recipe_saves?.[0]?.count ?? 0;
-          const profile = row.profiles;
+      try {
+        const [savedResponse, savedIdsResponse] = await Promise.all([
+          fetch('/api/recipes/saved'),
+          fetch('/api/recipes/saved-ids'),
+        ]);
+
+        if (!savedResponse.ok || !savedIdsResponse.ok) {
+          throw new Error('Failed to load wishlist');
+        }
+
+        const { data: savedData } = await savedResponse.json();
+        const { data: savedIdsData } = await savedIdsResponse.json();
+
+        if (!mounted) return;
+
+        const mapped: RecipeCardData[] = ((savedData ?? []) as RecipeRow[]).map((recipe) => {
+          const saveCount = recipe.recipe_saves?.[0]?.count ?? 0;
+          const profile = recipe.profiles;
           const author = profile?.full_name || profile?.username || 'Unknown cook';
           return {
             id: recipe.id.toString(),
@@ -112,49 +91,19 @@ export default function WishlistPage() {
             difficulty: recipe.difficulty ?? undefined,
           };
         });
-        
-        if (!mounted) return;
+
         setRecipes(mapped);
-        setSavedIds(new Set(mapped.map((recipe) => recipe.id)));
-        setIsLoading(false);
-        return;
+        setSavedIds(new Set((savedIdsData ?? []).map((id: string) => id.toString())));
+      } catch (err) {
+        if (mounted) {
+          setError(err instanceof Error ? err.message : 'Failed to load wishlist.');
+          setRecipes([]);
+        }
+      } finally {
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
-
-      const { data, error: fetchError } = await fetchSavedRecipes(supabase, userId);
-
-      if (!mounted) return;
-
-      if (fetchError) {
-        setError(fetchError.message ?? 'Failed to load wishlist.');
-        setRecipes([]);
-        setSavedIds(new Set());
-        setIsLoading(false);
-        return;
-      }
-
-      const mapped: RecipeCardData[] = ((data ?? []) as RecipeRow[]).map((recipe) => {
-        const saveCount = recipe.recipe_saves?.[0]?.count ?? 0;
-        const profile = recipe.profiles;
-        const author = profile?.full_name || profile?.username || 'Unknown cook';
-        return {
-          id: recipe.id.toString(),
-          title: recipe.title,
-          description: recipe.description ?? undefined,
-          imageUrl: recipe.hero_image_url ?? undefined,
-          authorName: author,
-          authorAvatar: profile?.avatar_url ?? undefined,
-          prepTime: recipe.prep_minutes ?? undefined,
-          cookTime: recipe.cook_minutes ?? undefined,
-          servings: recipe.servings ?? undefined,
-          wishlistCount: saveCount ?? undefined,
-          tags: recipe.tags ?? undefined,
-          difficulty: recipe.difficulty ?? undefined,
-        };
-      });
-
-      setRecipes(mapped);
-      setSavedIds(new Set(mapped.map((recipe) => recipe.id)));
-      setIsLoading(false);
     };
 
     loadSaved();
@@ -162,48 +111,17 @@ export default function WishlistPage() {
     return () => {
       mounted = false;
     };
-  }, [supabase, userId]);
+  }, [userId]);
 
   const handleToggleSave = useCallback(
     async (recipeId: string) => {
       if (!userId) {
-        setError('Please sign in to manage your wishlist.');
+        setError('Please sign in to use your wishlist.');
         setTimeout(() => setError(null), 2000);
         return;
       }
 
-      if (!USE_SUPABASE) {
-        // Use demo wishlist
-        const isSaved = isRecipeSavedByDemoUser(userId, Number(recipeId));
-        
-        if (isSaved) {
-          const { error } = removeRecipeFromWishlist(userId, Number(recipeId));
-          if (error) {
-            setError(error.message);
-            setTimeout(() => setError(null), 2000);
-            return;
-          }
-          setRecipes((prev) => prev.filter((recipe) => recipe.id !== recipeId));
-        } else {
-          const { error } = saveRecipeToWishlist(userId, Number(recipeId));
-          if (error) {
-            setError(error.message);
-            setTimeout(() => setError(null), 2000);
-            return;
-          }
-          // Reload to show the new saved recipe
-          window.location.reload();
-        }
-        return;
-      }
-
-      if (!supabase) {
-        setError('Authentication is not available.');
-        setTimeout(() => setError(null), 2000);
-        return;
-      }
-
-      const isSaved = savedIds.has(recipeId);
+      const currentlySaved = savedIds.has(recipeId);
       setSavedIds((prev) => {
         const next = new Set(prev);
         if (next.has(recipeId)) {
@@ -214,58 +132,72 @@ export default function WishlistPage() {
         return next;
       });
 
-      if (isSaved) {
-        setRecipes((prev) => prev.filter((recipe) => recipe.id !== recipeId));
-        await supabase
-          .from('recipe_saves')
-          .delete()
-          .eq('user_id', userId)
-          .eq('recipe_id', Number(recipeId));
-      } else {
-        await supabase.from('recipe_saves').insert({
-          user_id: userId,
-          recipe_id: Number(recipeId),
+      try {
+        if (currentlySaved) {
+          const response = await fetch(`/api/recipes/${recipeId}/unsave`, {
+            method: 'POST',
+          });
+          if (!response.ok) throw new Error('Failed to unsave recipe');
+          setRecipes((prev) =>
+            prev.map((recipe) =>
+              recipe.id === recipeId
+                ? {
+                    ...recipe,
+                    wishlistCount: Math.max((recipe.wishlistCount ?? 1) - 1, 0),
+                  }
+                : recipe,
+            ),
+          );
+        } else {
+          const response = await fetch(`/api/recipes/${recipeId}/save`, {
+            method: 'POST',
+          });
+          if (!response.ok) throw new Error('Failed to save recipe');
+          setRecipes((prev) =>
+            prev.map((recipe) =>
+              recipe.id === recipeId
+                ? {
+                    ...recipe,
+                    wishlistCount: (recipe.wishlistCount ?? 0) + 1,
+                  }
+                : recipe,
+            ),
+          );
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update wishlist');
+        setTimeout(() => setError(null), 2000);
+        // Revert optimistic update
+        setSavedIds((prev) => {
+          const next = new Set(prev);
+          if (currentlySaved) {
+            next.add(recipeId);
+          } else {
+            next.delete(recipeId);
+          }
+          return next;
         });
-        setRecipes((prev) =>
-          prev.map((recipe) =>
-            recipe.id === recipeId
-              ? {
-                  ...recipe,
-                  wishlistCount: (recipe.wishlistCount ?? 0) + 1,
-                }
-              : recipe,
-          ),
-        );
       }
     },
-    [savedIds, supabase, userId],
+    [savedIds, userId],
   );
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="mb-2 text-3xl font-bold text-brand-secondary">Wishlist</h1>
-            <p className="text-gray-600">All the recipes you saved for later.</p>
-          </div>
-          <Link
-            href="/"
-            className="inline-flex items-center justify-center rounded-full bg-brand-secondary px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-secondary-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-secondary"
-            aria-label="Back to home"
-          >
-            Back to recipes
-          </Link>
+        <div className="mb-8">
+          <h1 className="mb-2 text-3xl font-bold text-brand-secondary">My wishlist</h1>
+          <p className="text-gray-600">Recipes you have saved for later.</p>
         </div>
 
         {!userId ? (
           <div className="rounded-xl border border-border-subtle bg-brand-cream-soft p-6 text-center text-brand-secondary">
-            Sign in to start building your wishlist.
+            Sign in to view your wishlist.
           </div>
         ) : isLoading ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 3 }).map((_, index) => (
+            {Array.from({ length: 6 }).map((_, index) => (
               <div key={index} className="h-72 animate-pulse rounded-xl bg-brand-cream/60" />
             ))}
           </div>
@@ -286,15 +218,11 @@ export default function WishlistPage() {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border-subtle bg-white p-12 text-center">
-            <p className="text-lg font-medium text-gray-700">No saved recipes yet</p>
-            <p className="text-sm text-gray-500">
-              Browse the home feed and tap the heart icon to add recipes to your wishlist.
-            </p>
+            <p className="text-lg font-medium text-gray-700">Your wishlist is empty</p>
+            <p className="text-sm text-gray-500">Save recipes you love to see them here.</p>
           </div>
         )}
       </main>
     </div>
   );
 }
-
-
