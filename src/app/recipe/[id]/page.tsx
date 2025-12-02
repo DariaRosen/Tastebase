@@ -7,7 +7,7 @@ import { SaveRecipeToggle } from '@/components/save-recipe-toggle';
 import { DeleteRecipeButton } from './delete-button';
 import { USE_SUPABASE } from '@/lib/data-config';
 import { fetchRecipeById, checkRecipeSaved } from '@/lib/data-service';
-import { getDemoSession, isRecipeSavedByDemoUser, getRecipeSaveCount } from '@/lib/demo-auth';
+import { DemoRecipeDetailClient } from './demo-recipe-detail-client';
 
 type RecipeDetailRow = {
 	id: number;
@@ -53,8 +53,11 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 		notFound();
 	}
 
-	const supabase = USE_SUPABASE ? await createServerSupabase() : null;
+	if (!USE_SUPABASE) {
+		return <DemoRecipeDetailClient recipeId={recipeId} />;
+	}
 
+	const supabase = await createServerSupabase();
 	const { data: recipe, error } = await fetchRecipeById(supabase, recipeId);
 
 	if (error) {
@@ -69,28 +72,15 @@ export default async function RecipeDetailPage({ params }: RecipeDetailPageProps
 		notFound();
 	}
 
-	let user = null;
+	const {
+		data: { user },
+	} = await supabase.auth.getUser();
+
 	let isSaved = false;
 	let wishlistCount = recipe.recipe_saves?.[0]?.count ?? 0;
-	
-	if (!USE_SUPABASE) {
-		// Use demo auth
-		const demoUser = getDemoSession();
-		if (demoUser) {
-			user = { id: demoUser.id } as any;
-			isSaved = isRecipeSavedByDemoUser(demoUser.id, recipeId);
-			wishlistCount = getRecipeSaveCount(recipeId);
-		}
-	} else if (supabase) {
-		const {
-			data: { user: authUser },
-		} = await supabase.auth.getUser();
-		user = authUser;
-
-		if (user) {
-			const { data: saved } = await checkRecipeSaved(supabase, recipeId, user.id);
-			isSaved = saved;
-		}
+	if (user) {
+		const { data: saved } = await checkRecipeSaved(supabase, recipeId, user.id);
+		isSaved = saved;
 	}
 
 	const profile = recipe.profiles;
