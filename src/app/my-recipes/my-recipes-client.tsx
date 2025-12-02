@@ -1,13 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { Header } from '@/components/header';
 import { RecipeCard } from '@/components/recipe-card';
+import { DeleteRecipeButton } from '@/app/recipe/[id]/delete-button';
 import { createClient } from '@/lib/supabase';
 import { USE_SUPABASE } from '@/lib/data-config';
 import { fetchRecipesByAuthor, type RecipeRow } from '@/lib/data-service';
-import { getDemoSession } from '@/lib/demo-auth';
+import { getDemoSession, deleteDemoRecipe } from '@/lib/demo-auth';
 
 
 type RecipeCardData = {
@@ -31,6 +32,7 @@ export default function MyRecipesClient() {
   const [recipes, setRecipes] = useState<RecipeCardData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!USE_SUPABASE) {
@@ -124,6 +126,31 @@ export default function MyRecipesClient() {
     };
   }, [supabase, userId]);
 
+  const handleDeleteDemoRecipe = useCallback(
+    (recipeId: number) => {
+      if (!userId || isDeleting) {
+        return;
+      }
+
+      const shouldDelete = window.confirm('Delete this recipe? This action cannot be undone.');
+      if (!shouldDelete) {
+        return;
+      }
+
+      setIsDeleting(true);
+      const success = deleteDemoRecipe(recipeId, userId);
+      if (!success) {
+        alert('Failed to delete recipe. Please try again.');
+        setIsDeleting(false);
+        return;
+      }
+
+      setRecipes((previous) => previous.filter((recipe) => Number(recipe.id) !== recipeId));
+      setIsDeleting(false);
+    },
+    [isDeleting, userId],
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
@@ -158,7 +185,31 @@ export default function MyRecipesClient() {
         ) : recipes.length > 0 ? (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {recipes.map((recipe) => (
-              <RecipeCard key={recipe.id} {...recipe} />
+              <div key={recipe.id} className="flex flex-col gap-3">
+                <Link href={`/recipe/${recipe.id}`} className="block h-full">
+                  <RecipeCard {...recipe} />
+                </Link>
+                <div className="flex items-center gap-3">
+                  <Link
+                    href={`/edit/${recipe.id}`}
+                    className="inline-flex items-center justify-center rounded-lg border border-border-subtle px-3 py-1.5 text-xs font-medium text-brand-secondary transition hover:bg-brand-cream-soft"
+                  >
+                    Edit
+                  </Link>
+                  {USE_SUPABASE && supabase ? (
+                    <DeleteRecipeButton recipeId={Number(recipe.id)} />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteDemoRecipe(Number(recipe.id))}
+                      disabled={isDeleting}
+                      className="inline-flex items-center justify-center rounded-lg border border-brand-accent/50 px-3 py-1.5 text-xs font-medium text-brand-accent transition hover:bg-brand-cream-soft disabled:opacity-60"
+                    >
+                      Delete
+                    </button>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         ) : (
