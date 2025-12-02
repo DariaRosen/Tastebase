@@ -167,13 +167,13 @@ export const AuthDialog = ({ open, onOpenChange }: AuthDialogProps) => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full rounded-lg bg-brand-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-primary-hover disabled:opacity-50"
+            className="w-full rounded-lg bg-brand-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-brand-primary-hover disabled:opacity-50 mb-8"
           >
             {isLoading ? 'Loading...' : mode === 'login' ? 'Sign in' : 'Create account'}
           </button>
         </form>
 
-        <div className="mt-6 pt-6 text-center text-sm text-gray-600 border-t border-gray-200">
+        <div className="text-center text-sm text-gray-600 border-t border-gray-200" style={{ paddingTop: '400px' }}>
           {mode === 'login' ? (
             <>
               Don't have an account?{' '}
