@@ -92,7 +92,25 @@ interface BaseDemoRecipeForList {
 
 // Convert demo recipe to Supabase-like format
 export const convertDemoRecipeToRow = (recipe: BaseDemoRecipeForList): RecipeRow => {
-  const profile = getProfileById(recipe.author_id);
+  let profile = getProfileById(recipe.author_id);
+
+  // Prefer demo-auth user profile for demo recipes when available (browser only)
+  if (typeof window !== 'undefined') {
+    try {
+      const { getDemoUserProfileById } = require('./demo-auth') as {
+        getDemoUserProfileById: (
+          userId: string,
+        ) => { full_name: string | null; username: string | null; avatar_url: string | null } | null;
+      };
+      const demoProfile = getDemoUserProfileById(recipe.author_id);
+      if (demoProfile) {
+        profile = demoProfile as DemoProfile;
+      }
+    } catch {
+      // Ignore and fall back to demo-data profile
+    }
+  }
+
   // Use demo-auth for save count if available
   let saveCount = 0;
   if (typeof window !== 'undefined') {
@@ -129,7 +147,25 @@ export const convertDemoRecipeToRow = (recipe: BaseDemoRecipeForList): RecipeRow
 };
 
 const convertDemoRecipeToDetailRow = (recipe: DemoRecipe): RecipeDetailRow => {
-  const profile = getProfileById(recipe.author_id);
+  let profile = getProfileById(recipe.author_id);
+
+  // Prefer demo-auth user profile when available (browser only)
+  if (typeof window !== 'undefined') {
+    try {
+      const { getDemoUserProfileById } = require('./demo-auth') as {
+        getDemoUserProfileById: (
+          userId: string,
+        ) => { full_name: string | null; username: string | null; avatar_url: string | null } | null;
+      };
+      const demoProfile = getDemoUserProfileById(recipe.author_id);
+      if (demoProfile) {
+        profile = demoProfile as DemoProfile;
+      }
+    } catch {
+      // Ignore and fall back to demo-data profile
+    }
+  }
+
   // Use demo-auth for save count if available
   let saveCount = 0;
   if (typeof window !== 'undefined') {
@@ -329,7 +365,23 @@ export const fetchRecipeById = async (
       };
       const demoRecipe = getDemoRecipeById(recipeId);
       if (demoRecipe) {
-        const profile = getProfileById(demoRecipe.author_id);
+        let profile = getProfileById(demoRecipe.author_id);
+
+        // Prefer demo-auth user profile when available in browser
+        try {
+          const { getDemoUserProfileById } = require('./demo-auth') as {
+            getDemoUserProfileById: (
+              userId: string,
+            ) => { full_name: string | null; username: string | null; avatar_url: string | null } | null;
+          };
+          const demoProfile = getDemoUserProfileById(demoRecipe.author_id);
+          if (demoProfile) {
+            profile = demoProfile as DemoProfile;
+          }
+        } catch {
+          // Ignore and use existing profile
+        }
+
         const saveCount = getDemoSaveCount(demoRecipe.id);
 
         const detailRow: RecipeDetailRow = {
