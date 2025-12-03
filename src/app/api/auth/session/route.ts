@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ user: null });
     }
 
-    const user = getUserFromSession(sessionToken);
+    const user = await getUserFromSession(sessionToken);
 
     if (!user) {
       // Clear invalid session cookie
