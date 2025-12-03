@@ -158,29 +158,33 @@ export const ProfileForm = ({
         </div>
       </div>
 
-      <label className="flex flex-col text-sm text-gray-700">
-        <span className="font-medium">Username</span>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="cook123"
-          maxLength={32}
-          className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-        />
-        <span className="mt-1 text-xs text-gray-500">Lowercase letters, numbers, hyphens, and underscores only.</span>
-      </label>
+      <div className="flex flex-col gap-6 sm:flex-row">
+        <label className="flex flex-1 flex-col text-sm text-gray-700">
+          <span className="font-medium">Username</span>
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="cook123"
+            maxLength={32}
+            className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+          />
+          <span className="mt-1 text-xs text-gray-500">
+            Lowercase letters, numbers, hyphens, and underscores only.
+          </span>
+        </label>
 
-      <label className="flex flex-col text-sm text-gray-700">
-        <span className="font-medium">Full name</span>
-        <input
-          type="text"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          placeholder="Jane Doe"
-          className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-        />
-      </label>
+        <label className="flex flex-1 flex-col text-sm text-gray-700">
+          <span className="font-medium">Full name</span>
+          <input
+            type="text"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Jane Doe"
+            className="mt-1 rounded-lg border border-border-subtle px-3 py-2 text-gray-900 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+          />
+        </label>
+      </div>
 
       <label className="flex flex-col text-sm text-gray-700">
         <span className="font-medium">Bio</span>
