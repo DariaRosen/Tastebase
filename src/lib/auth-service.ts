@@ -41,13 +41,6 @@ export const verifyPassword = async (password: string, hash: string): Promise<bo
 };
 
 /**
- * Create a session token
- */
-const createSessionToken = (): string => {
-  return `session_${Date.now()}_${Math.random().toString(36).slice(2, 15)}`;
-};
-
-/**
  * Sign up a new user
  */
 export const signUpUser = async (
@@ -120,8 +113,9 @@ export const signUpUser = async (
       bio: newUser.bio ?? null,
     };
 
-    // Create session
-    const sessionToken = createSessionToken();
+    // Create session - use user ID as the stable session token so it can be resolved
+    // from any serverless/function runtime without relying on in-memory state.
+    const sessionToken = newUser._id.toString();
     sessions.set(sessionToken, {
       user: authUser,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -171,8 +165,9 @@ export const signInUser = async (
       bio: user.bio ?? null,
     };
 
-    // Create session
-    const sessionToken = createSessionToken();
+    // Create session - use user ID as the stable session token so it can be resolved
+    // from any serverless/function runtime without relying on in-memory state.
+    const sessionToken = user._id.toString();
     sessions.set(sessionToken, {
       user: authUser,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -189,20 +184,27 @@ export const signInUser = async (
 
 /**
  * Get user from session token
+ *
+ * The session token is the user ID, so this function can always resolve the
+ * user directly from MongoDB. We still optionally read the in-memory map if
+ * it exists in the current runtime, but we do not rely on it.
  */
-export const getUserFromSession = (sessionToken: string | null): AuthUser | null => {
-  if (!sessionToken) return null;
-
-  const session = sessions.get(sessionToken);
-  if (!session) return null;
-
-  // Check if session expired
-  if (session.expiresAt < new Date()) {
-    sessions.delete(sessionToken);
+export const getUserFromSession = async (sessionToken: string | null): Promise<AuthUser | null> => {
+  if (!sessionToken) {
     return null;
   }
 
-  return session.user;
+  const session = sessions.get(sessionToken);
+  if (session) {
+    if (session.expiresAt < new Date()) {
+      sessions.delete(sessionToken);
+      return null;
+    }
+    return session.user;
+  }
+
+  // Fallback: treat the token as the user ID and load from the database
+  return getUserById(sessionToken);
 };
 
 /**
