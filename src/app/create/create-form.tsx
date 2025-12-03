@@ -9,7 +9,54 @@ const initialState: CreateRecipeState = {};
 const difficultyOptions = ['Easy', 'Intermediate', 'Advanced'] as const;
 
 export const CreateRecipeForm = () => {
-	const [state, formAction, isPending] = useActionState(createRecipeAction, initialState);
+	const [state, formAction, isPending] = useActionState(
+		async (previousState: CreateRecipeState, formData: FormData) => {
+			// Upload hero image first if provided
+			const fileFromForm = formData.get('heroImage');
+			const heroFile = fileFromForm instanceof File && fileFromForm.size > 0 ? fileFromForm : null;
+
+			if (heroFile) {
+				try {
+					const uploadFormData = new FormData();
+					uploadFormData.append('file', heroFile);
+					uploadFormData.append('folder', 'Tastebase/recipe-images');
+
+					const uploadResponse = await fetch('/api/upload-image', {
+						method: 'POST',
+						body: uploadFormData,
+					});
+
+					if (uploadResponse.ok) {
+						const { url } = await uploadResponse.json();
+						formData.set('heroImageUrl', url);
+					} else {
+						const errorData = await uploadResponse.json().catch(() => ({ error: 'Unknown error' }));
+						return {
+							...previousState,
+							message: errorData.error || 'Failed to upload image. Please try again.',
+							errors: {
+								...previousState.errors,
+								heroImageUrl: errorData.error || 'Failed to upload image. Please try again.',
+							},
+						} as CreateRecipeState;
+					}
+				} catch (error) {
+					console.error('Image upload error:', error);
+					return {
+						...previousState,
+						message: 'Failed to upload image. Please try again.',
+						errors: {
+							...previousState.errors,
+							heroImageUrl: 'Failed to upload image. Please try again.',
+						},
+					} as CreateRecipeState;
+				}
+			}
+
+			return createRecipeAction(previousState, formData);
+		},
+		initialState,
+	);
 	const router = useRouter();
 	const [ingredients, setIngredients] = useState<string[]>(['']);
 	const [steps, setSteps] = useState<string[]>(['']);
@@ -131,45 +178,8 @@ export const CreateRecipeForm = () => {
 		}
 	};
 
-	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-		e.preventDefault();
-		
-		// Upload hero image first if provided
-		if (heroImageFile) {
-			try {
-				const uploadFormData = new FormData();
-				uploadFormData.append('file', heroImageFile);
-				uploadFormData.append('folder', 'Tastebase/recipe-images');
-
-				const uploadResponse = await fetch('/api/upload-image', {
-					method: 'POST',
-					body: uploadFormData,
-				});
-
-				if (uploadResponse.ok) {
-					const { url } = await uploadResponse.json();
-					// Add the image URL to the form data
-					const formData = new FormData(e.currentTarget);
-					formData.set('heroImageUrl', url);
-					formAction(formData);
-					return;
-				} else {
-					const errorData = await uploadResponse.json().catch(() => ({ error: 'Unknown error' }));
-					alert(errorData.error || 'Failed to upload image. Please try again.');
-					return;
-				}
-			} catch (error) {
-				console.error('Image upload error:', error);
-				alert('Failed to upload image. Please try again.');
-				return;
-			}
-		}
-
-		formAction(new FormData(e.currentTarget));
-	};
-
 	return (
-		<form onSubmit={handleSubmit} className="space-y-8">
+		<form action={formAction} className="space-y-8">
 			<input type="hidden" name="heroImageUrl" value={state.heroImageUrl ?? ''} />
 			<div className="grid gap-6 md:grid-cols-2">
 				<label className="flex flex-col text-sm text-gray-700">
