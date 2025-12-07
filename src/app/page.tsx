@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/header';
@@ -26,7 +26,7 @@ type RecipeCardData = {
   difficulty?: string;
 };
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   
@@ -377,5 +377,35 @@ export default function Home() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-brand-cream-soft">
+        <Header />
+        <main className="container mx-auto px-4 py-8">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+            <div>
+              <h1 className="mb-2 text-3xl font-bold text-brand-secondary">Discover Amazing Recipes</h1>
+              <p className="text-gray-600">Explore delicious recipes from our community of home cooks</p>
+            </div>
+          </div>
+          <div className="mt-8">
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <div
+                  key={index}
+                  className="h-72 animate-pulse rounded-xl bg-brand-cream/60"
+                />
+              ))}
+            </div>
+          </div>
+        </main>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
