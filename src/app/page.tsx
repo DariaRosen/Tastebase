@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Header } from '@/components/header';
 import { TabSwitcher } from '@/components/tab-switcher';
@@ -26,7 +27,16 @@ type RecipeCardData = {
 };
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<Tab>('latest');
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  
+  // Get initial tab from URL, default to 'latest'
+  const getInitialTab = (): Tab => {
+    const tabParam = searchParams.get('tab');
+    return tabParam === 'popular' ? 'popular' : 'latest';
+  };
+
+  const [activeTab, setActiveTab] = useState<Tab>(getInitialTab());
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [recipes, setRecipes] = useState<RecipeCardData[]>([]);
@@ -35,6 +45,27 @@ export default function Home() {
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | null>(null);
+
+  // Update URL when tab changes
+  const handleTabChange = useCallback((tab: Tab) => {
+    setActiveTab(tab);
+    const params = new URLSearchParams(searchParams.toString());
+    if (tab === 'popular') {
+      params.set('tab', 'popular');
+    } else {
+      params.delete('tab');
+    }
+    router.push(`/?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
+  // Sync tab state with URL changes (e.g., browser back/forward)
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    const tabFromUrl: Tab = tabParam === 'popular' ? 'popular' : 'latest';
+    if (tabFromUrl !== activeTab) {
+      setActiveTab(tabFromUrl);
+    }
+  }, [searchParams, activeTab]);
 
   useEffect(() => {
     const checkSession = async () => {
@@ -306,7 +337,7 @@ export default function Home() {
           </div>
         </div>
 
-        <TabSwitcher activeTab={activeTab} onTabChange={setActiveTab} />
+        <TabSwitcher activeTab={activeTab} onTabChange={handleTabChange} />
 
         <div className="mt-8">
           {isLoading ? (
