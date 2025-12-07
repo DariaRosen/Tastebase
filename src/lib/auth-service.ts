@@ -148,7 +148,27 @@ export const signInUser = async (
       };
     }
 
-    const isValid = await verifyPassword(password, user.password);
+    // Check if password is hashed (bcrypt hashes start with $2a$, $2b$, or $2y$)
+    const isHashed = user.password.startsWith('$2a$') || user.password.startsWith('$2b$') || user.password.startsWith('$2y$');
+    
+    let isValid: boolean;
+    if (isHashed) {
+      // Compare with bcrypt for hashed passwords
+      isValid = await verifyPassword(password, user.password);
+    } else {
+      // For plain text passwords (backward compatibility with seed data)
+      isValid = password === user.password;
+      
+      // If login succeeds with plain text, upgrade to hashed password
+      if (isValid) {
+        const hashedPassword = await hashPassword(password);
+        await User.updateOne(
+          { _id: user._id },
+          { $set: { password: hashedPassword } }
+        );
+      }
+    }
+    
     if (!isValid) {
       return {
         user: null,
