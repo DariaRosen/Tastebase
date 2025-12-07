@@ -256,6 +256,13 @@ export const fetchRecipeById = async (
 };
 
 /**
+ * Escape special regex characters in a string
+ */
+const escapeRegex = (str: string): string => {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+};
+
+/**
  * Search recipes
  */
 export const searchRecipesData = async (
@@ -270,14 +277,17 @@ export const searchRecipesData = async (
       return fetchPublishedRecipes(null, { limit: 50 });
     }
 
+    // Escape special regex characters for safe searching
+    const escapedQuery = escapeRegex(trimmedQuery);
+
     const recipes = await Recipe.find({
       is_published: true,
       $or: [
-        { title: { $regex: trimmedQuery, $options: 'i' } },
-        { description: { $regex: trimmedQuery, $options: 'i' } },
-        { difficulty: { $regex: trimmedQuery, $options: 'i' } },
-        { tags: { $in: [new RegExp(trimmedQuery, 'i')] } },
-        { 'recipe_ingredients.name': { $regex: trimmedQuery, $options: 'i' } },
+        { title: { $regex: escapedQuery, $options: 'i' } },
+        { description: { $regex: escapedQuery, $options: 'i' } },
+        { difficulty: { $regex: escapedQuery, $options: 'i' } },
+        { tags: { $in: [new RegExp(escapedQuery, 'i')] } },
+        { 'recipe_ingredients.name': { $regex: escapedQuery, $options: 'i' } },
       ],
     })
       .populate('author_id', 'full_name username avatar_url')

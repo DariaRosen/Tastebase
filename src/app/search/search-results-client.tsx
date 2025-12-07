@@ -3,7 +3,6 @@
 import { FormEvent, useCallback, useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { Search as SearchIcon } from 'lucide-react';
-import { Header } from '@/components/header';
 import { RecipeCard } from '@/components/recipe-card';
 import type { RecipeRow } from '@/lib/data-service';
 
@@ -222,57 +221,54 @@ export default function SearchResultsClient({ initialQuery }: SearchResultsClien
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header />
-      <main className="container mx-auto px-4 py-8">
-        <form onSubmit={handleSubmit} className="mb-8">
-          <div className="relative flex items-center">
-            <input
-              type="text"
-              value={queryInput}
-              onChange={(e) => setQueryInput(e.target.value)}
-              placeholder="Search recipes, ingredients, or tags..."
-              className="h-12 w-full rounded-l-full border border-border-subtle bg-white px-5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-              aria-label="Search for recipes"
-            />
-            <button
-              type="submit"
-              className="flex h-12 w-14 items-center justify-center rounded-r-full bg-brand-primary text-white transition hover:bg-brand-primary-hover"
-              aria-label="Search"
-            >
-              <SearchIcon className="h-5 w-5" />
-            </button>
-          </div>
-        </form>
+    <>
+      <form onSubmit={handleSubmit} className="mb-8">
+        <div className="relative flex items-center">
+          <input
+            type="text"
+            value={queryInput}
+            onChange={(e) => setQueryInput(e.target.value)}
+            placeholder="Search recipes, ingredients, or tags..."
+            className="h-12 w-full rounded-l-full border border-border-subtle bg-white px-5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+            aria-label="Search for recipes"
+          />
+          <button
+            type="submit"
+            className="flex h-12 w-14 items-center justify-center rounded-r-full bg-brand-primary text-white transition hover:bg-brand-primary-hover"
+            aria-label="Search"
+          >
+            <SearchIcon className="h-5 w-5" />
+          </button>
+        </div>
+      </form>
 
-        {isLoading ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {skeletonArray.map((_, index) => (
-              <div key={index} className="h-72 animate-pulse rounded-xl bg-brand-cream/60" />
-            ))}
-          </div>
-        ) : error ? (
-          <div className="rounded-xl border border-brand-accent/30 bg-brand-cream-soft p-6 text-center text-brand-accent">
-            {error}
-          </div>
-        ) : recipes.length > 0 ? (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {recipes.map((recipe) => (
-              <RecipeCard
-                key={recipe.id}
-                {...recipe}
-                isSaved={savedIds.has(recipe.id)}
-                onToggleSave={handleToggleSave}
-              />
-            ))}
-          </div>
-        ) : currentQuery.trim() ? (
-          <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border-subtle bg-white p-12 text-center">
-            <p className="text-lg font-medium text-gray-700">No recipes found</p>
-            <p className="text-sm text-gray-500">Try a different search term.</p>
-          </div>
-        ) : null}
-      </main>
-    </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {skeletonArray.map((_, index) => (
+            <div key={index} className="h-72 animate-pulse rounded-xl bg-brand-cream/60" />
+          ))}
+        </div>
+      ) : error ? (
+        <div className="rounded-xl border border-brand-accent/30 bg-brand-cream-soft p-6 text-center text-brand-accent">
+          {error}
+        </div>
+      ) : recipes.length > 0 ? (
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {recipes.map((recipe) => (
+            <RecipeCard
+              key={recipe.id}
+              {...recipe}
+              isSaved={savedIds.has(recipe.id)}
+              onToggleSave={handleToggleSave}
+            />
+          ))}
+        </div>
+      ) : currentQuery.trim() ? (
+        <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border-subtle bg-white p-12 text-center">
+          <p className="text-lg font-medium text-gray-700">No recipes found</p>
+          <p className="text-sm text-gray-500">Try a different search term.</p>
+        </div>
+      ) : null}
+    </>
   );
 }
