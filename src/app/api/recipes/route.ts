@@ -36,6 +36,8 @@ export async function GET(request: NextRequest) {
       let userMessage = 'Failed to fetch recipes';
       if (error.message.includes('MONGO_URL') || error.message.includes('environment variable')) {
         userMessage = 'Database configuration error. Please check server configuration.';
+      } else if (error.message.includes('authentication') || error.message.includes('password') || error.message.includes('credentials')) {
+        userMessage = 'Database authentication failed. Please verify MONGO_URL contains the correct password in Vercel environment variables.';
       } else if (error.message.includes('connection') || error.message.includes('timeout')) {
         userMessage = 'Database connection error. Please try again later.';
       }
