@@ -58,10 +58,19 @@ async function connectDB(): Promise<typeof mongoose> {
   if (!cached.promise) {
     const opts = {
       bufferCommands: false,
+      serverSelectionTimeoutMS: 10000, // 10 seconds timeout
+      socketTimeoutMS: 45000, // 45 seconds socket timeout
     };
 
     cached.promise = mongoose.connect(getMongoUri(), opts).then((mongoose) => {
+      console.log('[MongoDB] Successfully connected to database');
       return mongoose;
+    }).catch((error) => {
+      console.error('[MongoDB] Connection error:', error);
+      console.error('[MongoDB] Error name:', error?.name);
+      console.error('[MongoDB] Error message:', error?.message);
+      cached.promise = null;
+      throw error;
     });
   }
 
@@ -69,7 +78,9 @@ async function connectDB(): Promise<typeof mongoose> {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
-    throw e;
+    const error = e instanceof Error ? e : new Error(String(e));
+    console.error('[MongoDB] Failed to establish connection:', error.message);
+    throw error;
   }
 
   return cached.conn;
