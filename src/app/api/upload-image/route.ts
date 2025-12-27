@@ -1,24 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 
-// Configure Cloudinary SDK (like the working Rolan-Photographer project)
-// Only configure if credentials are available to avoid errors at module load
-try {
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
-  const apiSecret = process.env.CLOUDINARY_API_SECRET;
-  
-  if (cloudName || apiKey || apiSecret) {
-    cloudinary.config({
-      cloud_name: cloudName || '',
-      api_key: apiKey || '',
-      api_secret: apiSecret || '',
-    });
-  }
-} catch (configError) {
-  console.warn('[Upload Image] Cloudinary config error (non-fatal):', configError);
-}
-
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
@@ -47,17 +29,29 @@ export async function POST(request: NextRequest) {
 
     console.log('[Upload Image] Cloudinary config check:', {
       hasCloudName: !!cloudName,
+      cloudName: cloudName ? `${cloudName.substring(0, 4)}...` : 'NOT SET',
       hasUploadPreset: !!uploadPreset,
+      uploadPreset: uploadPreset ? `${uploadPreset.substring(0, 4)}...` : 'NOT SET',
       hasApiKey: !!apiKey,
       hasApiSecret: !!apiSecret,
     });
 
     if (!cloudName) {
       return NextResponse.json(
-        { error: 'Cloudinary cloud name not configured. Please set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME in environment variables.' },
+        { 
+          error: 'Cloudinary cloud name not configured',
+          details: 'Please set NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME in Vercel environment variables.',
+        },
         { status: 500 }
       );
     }
+
+    // Configure Cloudinary SDK at runtime (like the working Rolan-Photographer project)
+    cloudinary.config({
+      cloud_name: cloudName,
+      api_key: apiKey || '',
+      api_secret: apiSecret || '',
+    });
 
     // Convert file to buffer for Cloudinary SDK
     const arrayBuffer = await file.arrayBuffer();
@@ -97,21 +91,48 @@ export async function POST(request: NextRequest) {
         message: uploadError?.message,
         http_code: uploadError?.http_code,
         error: uploadError?.error,
+        name: uploadError?.name,
+        stack: uploadError?.stack,
       });
+      
+      // Extract detailed error information
+      let errorMessage = 'Failed to upload image to Cloudinary';
+      let errorDetails = uploadError?.message || uploadError?.error?.message || 'Unknown error';
+      
+      // Provide more specific error messages
+      if (uploadError?.http_code === 401) {
+        errorMessage = 'Cloudinary authentication failed';
+        errorDetails = 'Invalid API credentials. Please check CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in Vercel environment variables.';
+      } else if (uploadError?.http_code === 400) {
+        errorMessage = 'Invalid upload request';
+        errorDetails = uploadError?.error?.message || 'The image file may be invalid or corrupted.';
+      } else if (uploadError?.message?.includes('Invalid preset')) {
+        errorMessage = 'Invalid upload preset';
+        errorDetails = 'The upload preset is not configured correctly. Please check NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET in Vercel environment variables.';
+      }
+      
       return NextResponse.json(
         { 
-          error: 'Failed to upload image to Cloudinary',
-          details: uploadError?.message || uploadError?.error?.message || 'Unknown error',
+          error: errorMessage,
+          details: errorDetails,
+          http_code: uploadError?.http_code,
+          cloudinaryError: process.env.NODE_ENV === 'development' ? {
+            message: uploadError?.message,
+            error: uploadError?.error,
+            http_code: uploadError?.http_code,
+          } : undefined,
         },
         { status: 500 }
       );
     }
   } catch (error) {
     console.error('[Upload Image] Unexpected error:', error);
+    console.error('[Upload Image] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     return NextResponse.json(
       { 
         error: 'Failed to upload image',
         details: error instanceof Error ? error.message : 'Unknown error',
+        stack: process.env.NODE_ENV === 'development' && error instanceof Error ? error.stack : undefined,
       },
       { status: 500 }
     );
