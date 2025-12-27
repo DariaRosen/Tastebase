@@ -1,24 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { v2 as cloudinary } from 'cloudinary';
 
-// Use process.env directly (works in both local and Vercel)
-// In Vercel, environment variables are automatically injected into process.env
-// Locally, Next.js loads them from .env.local automatically
-function getCloudinaryConfig() {
-  const cloudName = 
-    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
-    process.env.CLOUDINARY_CLOUD_NAME ||
-    '';
-  
-  const uploadPreset = 
-    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ||
-    process.env.CLOUDINARY_UPLOAD_PRESET ||
-    '';
-  
-  const apiKey = process.env.CLOUDINARY_API_KEY || '';
-  const apiSecret = process.env.CLOUDINARY_API_SECRET || '';
-  
-  return { cloudName, uploadPreset, apiKey, apiSecret };
-}
+// Configure Cloudinary SDK (like the working Rolan-Photographer project)
+cloudinary.config({
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || '',
+  api_key: process.env.CLOUDINARY_API_KEY || '',
+  api_secret: process.env.CLOUDINARY_API_SECRET || '',
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,8 +27,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File must be 5MB or smaller' }, { status: 400 });
     }
 
-    // Get Cloudinary credentials from environment variables
-    const { cloudName, uploadPreset, apiKey, apiSecret } = getCloudinaryConfig();
+    // Check Cloudinary configuration
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME;
+    const uploadPreset = process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || process.env.CLOUDINARY_UPLOAD_PRESET;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
     if (!cloudName) {
       return NextResponse.json(
@@ -49,84 +40,61 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert file to base64 for Cloudinary upload
+    // Convert file to buffer for Cloudinary SDK
     const arrayBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    const buffer = Buffer.from(arrayBuffer);
+    const base64 = buffer.toString('base64');
     const dataUri = `data:${file.type};base64,${base64}`;
 
-    // Try signed upload first (if API credentials are available), otherwise use unsigned preset
-    
-    let cloudinaryResponse: Response;
-    
-    if (apiKey && apiSecret) {
-      // Use signed upload with API credentials (no preset needed)
-      const timestamp = Math.round(new Date().getTime() / 1000);
-      const crypto = await import('crypto');
-      const params = {
-        folder: 'Tastebase/avatars',
-        timestamp: timestamp.toString(),
-      };
-      // Create signature from sorted parameters
-      const paramString = Object.keys(params)
-        .sort()
-        .map(key => `${key}=${params[key as keyof typeof params]}`)
-        .join('&');
-      const signature = crypto.createHash('sha1')
-        .update(paramString + apiSecret)
-        .digest('hex');
+    try {
+      // Use Cloudinary SDK for upload (like the working Rolan-Photographer project)
+      let uploadResult;
       
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', dataUri);
-      uploadFormData.append('api_key', apiKey);
-      uploadFormData.append('timestamp', timestamp.toString());
-      uploadFormData.append('signature', signature);
-      uploadFormData.append('folder', 'Tastebase/avatars');
-      
-      cloudinaryResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        {
-          method: 'POST',
-          body: uploadFormData,
-        }
-      );
-    } else if (uploadPreset) {
-      // Use unsigned upload with preset
-      const uploadFormData = new FormData();
-      uploadFormData.append('file', dataUri);
-      uploadFormData.append('upload_preset', uploadPreset);
-      uploadFormData.append('folder', 'Tastebase/avatars');
-      
-      cloudinaryResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-        {
-          method: 'POST',
-          body: uploadFormData,
-        }
-      );
-    } else {
-      return NextResponse.json(
-        { error: 'Cloudinary upload preset or API credentials not configured. Please set NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET or CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in environment variables.' },
-        { status: 500 }
-      );
-    }
+      if (apiKey && apiSecret) {
+        // Use signed upload with API credentials
+        console.log('[Upload Avatar] Using Cloudinary SDK with API credentials');
+        uploadResult = await cloudinary.uploader.upload(dataUri, {
+          folder: 'Tastebase/avatars',
+        });
+      } else if (uploadPreset) {
+        // Use unsigned upload with preset
+        console.log('[Upload Avatar] Using Cloudinary SDK with upload preset');
+        uploadResult = await cloudinary.uploader.upload(dataUri, {
+          folder: 'Tastebase/avatars',
+          upload_preset: uploadPreset,
+        });
+      } else {
+        console.error('[Upload Avatar] Missing Cloudinary configuration');
+        return NextResponse.json(
+          { error: 'Cloudinary upload preset or API credentials not configured. Please set NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET or CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET in environment variables.' },
+          { status: 500 }
+        );
+      }
 
-    if (!cloudinaryResponse.ok) {
-      const error = await cloudinaryResponse.json();
-      console.error('Cloudinary upload error:', error);
-      return NextResponse.json(
-        { error: 'Failed to upload image to Cloudinary' },
-        { status: 500 }
-      );
-    }
-
-    const cloudinaryData = await cloudinaryResponse.json();
-    const imageUrl = cloudinaryData.secure_url;
+      const imageUrl = uploadResult.secure_url;
 
     return NextResponse.json({ url: imageUrl });
+    } catch (uploadError: any) {
+      console.error('[Upload Avatar] Cloudinary upload error:', {
+        message: uploadError?.message,
+        http_code: uploadError?.http_code,
+        error: uploadError?.error,
+      });
+      return NextResponse.json(
+        { 
+          error: 'Failed to upload image to Cloudinary',
+          details: uploadError?.message || uploadError?.error?.message || 'Unknown error',
+        },
+        { status: 500 }
+      );
+    }
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('[Upload Avatar] Unexpected error:', error);
     return NextResponse.json(
-      { error: 'Failed to upload image' },
+      { 
+        error: 'Failed to upload image',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }
