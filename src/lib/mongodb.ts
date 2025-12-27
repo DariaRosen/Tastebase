@@ -1,29 +1,16 @@
 import mongoose from 'mongoose';
 
 const getMongoUri = () => {
-  // Try to load .env.local if MONGO_URL is not set (fallback for Next.js)
-  if (!process.env.MONGO_URL && typeof window === 'undefined') {
-    try {
-      const dotenv = require('dotenv');
-      const path = require('path');
-      const result = dotenv.config({ path: path.join(process.cwd(), '.env.local') });
-      if (result.error) {
-        console.warn('[MongoDB] dotenv.config error:', result.error);
-      } else {
-        console.log('[MongoDB] Loaded .env.local via dotenv');
-      }
-    } catch (e) {
-      console.warn('[MongoDB] Failed to load .env.local:', e);
-    }
-  }
-  
+  // Use process.env directly (works in both local and Vercel)
+  // In Vercel, environment variables are automatically injected into process.env
+  // Locally, Next.js loads them from .env.local automatically
   const dbURL = process.env.MONGO_URL;
   const dbName = process.env.DB_NAME || 'Tastebase';
   
   if (!dbURL) {
     console.error('[MongoDB] MONGO_URL not found in process.env');
     console.error('[MongoDB] Available env keys:', Object.keys(process.env).filter(k => k.includes('MONGO') || k.includes('DB')));
-    throw new Error('Please define the MONGO_URL environment variable inside .env.local');
+    throw new Error('MONGO_URL environment variable is not set. Please configure it in Vercel environment variables.');
   }
   
   // Construct full MongoDB URI with database name
