@@ -1,87 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { resolve } from 'path';
-import { readFileSync } from 'fs';
 
-// Module-level cache for environment variables (workaround for Turbopack issue)
-let cloudinaryConfig: { cloudName: string; uploadPreset: string; apiKey: string; apiSecret: string } | null = null;
-
-function loadCloudinaryConfig() {
-  if (cloudinaryConfig) return cloudinaryConfig;
-
-  try {
-    const envLocalPath = resolve(process.cwd(), '.env.local');
-    // Read as buffer first to detect encoding
-    const buffer = readFileSync(envLocalPath);
-    
-    // Check if it's UTF-16 (has null bytes between characters)
-    let envContent: string;
-    if (buffer[0] === 0xFF && buffer[1] === 0xFE) {
-      // UTF-16 LE BOM
-      envContent = buffer.toString('utf16le');
-    } else if (buffer[0] === 0xFE && buffer[1] === 0xFF) {
-      // UTF-16 BE BOM
-      const swapped = Buffer.alloc(buffer.length);
-      for (let i = 0; i < buffer.length - 1; i += 2) {
-        swapped[i] = buffer[i + 1];
-        swapped[i + 1] = buffer[i];
-      }
-      envContent = swapped.toString('utf16le');
-    } else {
-      // Try UTF-8 first
-      envContent = buffer.toString('utf8');
-      // If it has null bytes between characters, it's likely UTF-16 without BOM
-      if (envContent.includes('\0') && buffer.length > 0 && buffer[1] === 0) {
-        envContent = buffer.toString('utf16le');
-      }
-    }
-    
-    // Remove BOM if present
-    if (envContent.charCodeAt(0) === 0xFEFF) {
-      envContent = envContent.slice(1);
-    }
-    
-    const lines = envContent.split(/\r?\n/);
-    let cloudName = '';
-    let uploadPreset = '';
-    let apiKey = '';
-    let apiSecret = '';
-    
-    lines.forEach((line) => {
-      const trimmed = line.trim();
-      if (trimmed && !trimmed.startsWith('#')) {
-        const equalIndex = trimmed.indexOf('=');
-        if (equalIndex > 0) {
-          let key = trimmed.substring(0, equalIndex).trim();
-          // Remove all null bytes and non-printable characters
-          key = key.replace(/\0/g, '').replace(/[^\x20-\x7E]/g, '');
-          let value = trimmed.substring(equalIndex + 1).trim();
-          // Remove all null bytes and non-printable characters from value
-          value = value.replace(/\0/g, '').replace(/[^\x20-\x7E]/g, '');
-          
-          // Match using cleaned key
-          if (key.includes('CLOUDINARY') && key.includes('CLOUD_NAME')) {
-            cloudName = value;
-          }
-          if (key.includes('CLOUDINARY') && key.includes('UPLOAD_PRESET')) {
-            uploadPreset = value;
-          }
-          if (key === 'CLOUDINARY_API_KEY' || (key.includes('CLOUDINARY') && key.includes('API_KEY') && !key.includes('SECRET'))) {
-            apiKey = value;
-          }
-          if (key === 'CLOUDINARY_API_SECRET' || (key.includes('CLOUDINARY') && key.includes('API_SECRET'))) {
-            apiSecret = value;
-          }
-        }
-      }
-    });
-    
-    cloudinaryConfig = { cloudName, uploadPreset, apiKey, apiSecret };
-    return cloudinaryConfig;
-  } catch (e) {
-    console.error('Failed to load Cloudinary config:', e);
-    cloudinaryConfig = { cloudName: '', uploadPreset: '', apiKey: '', apiSecret: '' };
-    return cloudinaryConfig;
-  }
+// Use process.env directly (works in both local and Vercel)
+// In Vercel, environment variables are automatically injected into process.env
+// Locally, Next.js loads them from .env.local automatically
+function getCloudinaryConfig() {
+  const cloudName = 
+    process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME ||
+    process.env.CLOUDINARY_CLOUD_NAME ||
+    '';
+  
+  const uploadPreset = 
+    process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET ||
+    process.env.CLOUDINARY_UPLOAD_PRESET ||
+    '';
+  
+  const apiKey = process.env.CLOUDINARY_API_KEY || '';
+  const apiSecret = process.env.CLOUDINARY_API_SECRET || '';
+  
+  return { cloudName, uploadPreset, apiKey, apiSecret };
 }
 
 export async function POST(request: NextRequest) {
@@ -104,8 +40,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File must be 5MB or smaller' }, { status: 400 });
     }
 
-    // Get Cloudinary credentials from our module-level cache
-    const { cloudName, uploadPreset, apiKey, apiSecret } = loadCloudinaryConfig();
+    // Get Cloudinary credentials from environment variables
+    const { cloudName, uploadPreset, apiKey, apiSecret } = getCloudinaryConfig();
 
     if (!cloudName) {
       return NextResponse.json(
