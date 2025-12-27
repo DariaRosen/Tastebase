@@ -46,11 +46,13 @@ export async function POST(request: NextRequest) {
     // Convert file to buffer for Cloudinary SDK
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+    
+    // Convert to data URI format that Cloudinary accepts
     const base64 = buffer.toString('base64');
     const dataUri = `data:${file.type};base64,${base64}`;
 
     try {
-      // Use Cloudinary SDK for upload (like the working Rolan-Photographer project)
+      // Use Cloudinary SDK for upload
       let uploadResult;
       
       if (apiKey && apiSecret) {
@@ -58,13 +60,16 @@ export async function POST(request: NextRequest) {
         console.log('[Upload Avatar] Using Cloudinary SDK with API credentials');
         uploadResult = await cloudinary.uploader.upload(dataUri, {
           folder: 'Tastebase/avatars',
+          resource_type: 'image',
         });
       } else if (uploadPreset) {
         // Use unsigned upload with preset
+        // Note: For unsigned uploads, folder must be set in the preset, not here
         console.log('[Upload Avatar] Using Cloudinary SDK with upload preset');
         uploadResult = await cloudinary.uploader.upload(dataUri, {
-          folder: 'Tastebase/avatars',
           upload_preset: uploadPreset,
+          resource_type: 'image',
+          // Don't set folder for unsigned uploads - it must be in the preset
         });
       } else {
         console.error('[Upload Avatar] Missing Cloudinary configuration');
