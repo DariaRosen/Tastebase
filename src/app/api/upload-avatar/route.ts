@@ -2,11 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
 
 // Configure Cloudinary SDK (like the working Rolan-Photographer project)
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME || '',
-  api_key: process.env.CLOUDINARY_API_KEY || '',
-  api_secret: process.env.CLOUDINARY_API_SECRET || '',
-});
+// Only configure if credentials are available to avoid errors at module load
+try {
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+  
+  if (cloudName || apiKey || apiSecret) {
+    cloudinary.config({
+      cloud_name: cloudName || '',
+      api_key: apiKey || '',
+      api_secret: apiSecret || '',
+    });
+  }
+} catch (configError) {
+  console.warn('[Upload Avatar] Cloudinary config error (non-fatal):', configError);
+}
 
 export async function POST(request: NextRequest) {
   try {
