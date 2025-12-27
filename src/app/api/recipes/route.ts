@@ -11,15 +11,18 @@ export async function GET(request: NextRequest) {
     // Check if MongoDB URL is configured
     if (!process.env.MONGO_URL) {
       console.error('[Recipes API] MONGO_URL environment variable is not set');
+      console.error('[Recipes API] Available env keys:', Object.keys(process.env).filter(k => k.includes('MONGO') || k.includes('DB')));
       return NextResponse.json(
         { 
           error: 'Database configuration error',
-          message: 'MongoDB connection string is not configured. Please set MONGO_URL environment variable.',
+          message: 'MongoDB connection string is not configured. Please set MONGO_URL environment variable in Vercel.',
+          details: 'Check Vercel project settings → Environment Variables',
         },
         { status: 500 }
       );
     }
 
+    console.log('[Recipes API] Fetching recipes with options:', { orderBy, orderDirection, limit });
     const { data, error } = await fetchPublishedRecipes(null, {
       orderBy,
       orderDirection,
