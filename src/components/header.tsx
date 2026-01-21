@@ -49,14 +49,14 @@ export const Header = () => {
     if (trimmed) {
       router.push(`/search?q=${encodeURIComponent(trimmed)}`);
       setSearchValue('');
-    } else {
-      router.push('/search');
+      return;
     }
+    router.push('/search');
   };
 
   return (
     <header className="sticky top-0 z-[60] w-full border-b border-border-subtle bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/70">
-      <div className="container mx-auto flex h-20 items-center justify-between px-4">
+      <div className="container mx-auto flex flex-col gap-3 px-4 py-3 md:h-20 md:flex-row md:items-center md:justify-between">
         <Link href="/" className="flex items-center space-x-3" aria-label="Tastebase home">
           <Image
             src="/favicon.png"
@@ -69,59 +69,65 @@ export const Header = () => {
           <span className="text-4xl font-bold text-brand-secondary md:text-5xl">Tastebase</span>
         </Link>
 
-        <form
-          onSubmit={handleSearch}
-          className="relative hidden w-full max-w-lg items-center md:flex"
-          role="search"
-        >
-          <input
-            type="text"
-            value={searchValue}
-            onChange={(event) => setSearchValue(event.target.value)}
-            placeholder="Find a recipe or ingredient"
-            className="h-12 w-full rounded-l-full border border-border-subtle bg-white px-5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
-            aria-label="Search for recipes"
-          />
-          <button
-            type="submit"
-            className="flex h-12 w-14 items-center justify-center rounded-r-full bg-brand-primary text-white transition hover:bg-brand-primary-hover"
-            aria-label="Search"
+        <div className="flex w-full flex-col items-stretch gap-2 md:w-auto md:flex-row md:items-center md:justify-end md:gap-4">
+          {/* Desktop search */}
+          <form
+            onSubmit={handleSearch}
+            className="relative hidden w-full max-w-lg items-center md:flex"
+            role="search"
           >
-            <Search className="h-5 w-5" />
-          </button>
-        </form>
+            <input
+              type="text"
+              value={searchValue}
+              onChange={(event) => setSearchValue(event.target.value)}
+              placeholder="Find a recipe or ingredient"
+              className="h-12 w-full rounded-l-full border border-border-subtle bg-white px-5 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+              aria-label="Search for recipes"
+            />
+            <button
+              type="submit"
+              className="flex h-12 w-14 items-center justify-center rounded-r-full bg-brand-primary text-white transition hover:bg-brand-primary-hover"
+              aria-label="Search"
+            >
+              <Search className="h-5 w-5" />
+            </button>
+          </form>
 
-        <div className="flex items-center space-x-4">
+          {/* Mobile search */}
           <div className="flex items-center gap-2 md:hidden">
             <input
               type="text"
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Search"
-              className="h-10 w-40 rounded-xl border border-border-subtle bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
+              placeholder="Search recipes"
+              className="h-10 flex-1 rounded-full border border-border-subtle bg-white px-3 text-sm text-gray-700 placeholder:text-gray-400 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               aria-label="Search for recipes"
             />
             <button
               type="button"
               onClick={handleMobileSearch}
-              className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary text-white hover:bg-brand-primary-hover"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-primary text-white hover:bg-brand-primary-hover"
               aria-label="Search"
             >
               <Search className="h-4 w-4" />
             </button>
           </div>
-          {isLoggedIn ? (
-            <UserMenu />
-          ) : (
-            <button
-              onClick={() => setIsAuthOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-brand-cream hover:text-brand-secondary"
-              aria-label="Sign in"
-            >
-              <LogIn className="h-4 w-4" />
-              Sign in
-            </button>
-          )}
+
+          {/* Auth / user menu */}
+          <div className="flex items-center justify-end">
+            {isLoggedIn ? (
+              <UserMenu />
+            ) : (
+              <button
+                onClick={() => setIsAuthOpen(true)}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-brand-cream hover:text-brand-secondary md:w-auto"
+                aria-label="Sign in"
+              >
+                <LogIn className="h-4 w-4" />
+                <span>Sign in</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

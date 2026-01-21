@@ -22,3 +22,5 @@ console.log('');
 console.log('Copy this hash and replace the placeholder passwords in seed-users.json');
 console.log('All users will have the password: password123');
 
+
+
