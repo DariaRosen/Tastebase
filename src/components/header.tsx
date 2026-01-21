@@ -56,20 +56,39 @@ export const Header = () => {
 
   return (
     <header className="sticky top-0 z-[60] w-full border-b border-border-subtle bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/70">
-      <div className="container mx-auto flex flex-col gap-3 px-4 py-3 md:h-20 md:flex-row md:items-center md:justify-between">
-        <Link href="/" className="flex items-center space-x-3" aria-label="Tastebase home">
-          <Image
-            src="/favicon.png"
-            alt="Tastebase logo"
-            width={56}
-            height={56}
-            className="h-14 w-14 rounded-md"
-            priority
-          />
-          <span className="text-4xl font-bold text-brand-secondary md:text-5xl">Tastebase</span>
-        </Link>
+      <div className="container mx-auto flex flex-col gap-3 px-4 py-3">
+        {/* Top row: logo + auth (always) */}
+        <div className="flex items-center justify-between gap-3">
+          <Link href="/" className="flex items-center space-x-3" aria-label="Tastebase home">
+            <Image
+              src="/favicon.png"
+              alt="Tastebase logo"
+              width={48}
+              height={48}
+              className="h-12 w-12 rounded-md md:h-14 md:w-14"
+              priority
+            />
+            <span className="text-2xl font-bold text-brand-secondary md:text-4xl">Tastebase</span>
+          </Link>
 
-        <div className="flex w-full flex-col items-stretch gap-2 md:w-auto md:flex-row md:items-center md:justify-end md:gap-4">
+          <div className="flex items-center">
+            {isLoggedIn ? (
+              <UserMenu />
+            ) : (
+              <button
+                onClick={() => setIsAuthOpen(true)}
+                className="inline-flex items-center gap-2 rounded-full border border-border-subtle px-3 py-2 text-xs font-medium text-gray-700 transition hover:bg-brand-cream hover:text-brand-secondary md:text-sm"
+                aria-label="Sign in"
+              >
+                <LogIn className="h-4 w-4" />
+                <span>Sign in</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Second row: search (mobile & desktop) */}
+        <div className="flex w-full flex-col items-stretch gap-2">
           {/* Desktop search */}
           <form
             onSubmit={handleSearch}
@@ -111,22 +130,6 @@ export const Header = () => {
             >
               <Search className="h-4 w-4" />
             </button>
-          </div>
-
-          {/* Auth / user menu */}
-          <div className="flex items-center justify-end">
-            {isLoggedIn ? (
-              <UserMenu />
-            ) : (
-              <button
-                onClick={() => setIsAuthOpen(true)}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-border-subtle px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-brand-cream hover:text-brand-secondary md:w-auto"
-                aria-label="Sign in"
-              >
-                <LogIn className="h-4 w-4" />
-                <span>Sign in</span>
-              </button>
-            )}
           </div>
         </div>
       </div>
